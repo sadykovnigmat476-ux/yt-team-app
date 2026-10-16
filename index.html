@@ -150,6 +150,7 @@ const FLAGS = { ru: "🇷🇺", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪", 
 const WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
 const MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
 const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const KINDS = [{ id: "script", e: "📝", n: "Сценарий" }, { id: "voice", e: "🎙", n: "Озвучка" }, { id: "video", e: "🎬", n: "Готовое видео" }];
 const TABS = [
   { id: "my", e: "✅", n: "Мои" },
   { id: "episodes", e: "🎬", n: "Выпуски" },
@@ -227,6 +228,8 @@ function isActive(t) {
   const b = blocker(t);
   return !b || !!b.done_at;
 }
+const topicBound = (pid, kind) => (S.topics || []).some((t) => t.project_id === pid && t.kind === kind) || !!(proj(pid) || {}).thread_id;
+const topicStatus = (p) => KINDS.map((k) => k.e + (topicBound(p.id, k.id) ? "✅" : "⚠️")).join(" ");
 function stageInfo(eid, stage) {
   const ts = epTasks(eid).filter((t) => t.stage === stage).sort((a, b) => chSort(a) - chSort(b));
   const done = ts.filter((t) => t.done_at).length;
@@ -455,9 +458,15 @@ function viewSettings() {
     }).join(" · ");
     html += `<div class="card ${admin ? "clickable" : ""}" ${admin ? `data-act="edit-project" data-id="${p.id}"` : ""}>
       <div class="row"><div class="grow"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted">${chs.map((c) => flag(c.lang) + " " + esc(c.lang.toUpperCase())).join("  ") || "нет каналов"}</div>
-      <div class="muted">${roles}</div><div class="muted">выпуск каждые ${p.cadence_days} дн.${p.thread_id ? "" : " · ⚠️ тема в группе не привязана"}</div></div>${admin ? "›" : ""}</div></div>`;
+      <div class="muted">${roles}</div>
+      <div class="muted">${p.drive_folder_id ? "📁 Диск ✅" : "📁 Диск: папка не задана"} · Темы: ${topicStatus(p)}</div></div>${admin ? "›" : ""}</div></div>`;
   }
   if (admin) html += `<button class="btn ghost block" data-act="edit-project" data-id="0">+ Новый проект</button>`;
+
+  const dr = S.drive || {};
+  html += `<h2>Google Диск</h2><div class="card small">${dr.enabled
+    ? `✅ Подключён. Бот видит папки, открытые для<br><code style="user-select:all">${esc(dr.email || "")}</code><br><span class="muted">Новые файлы подхватываются в течение ~10 минут.</span>`
+    : "⚠️ Не подключён: нужен ключ сервисного аккаунта Google."}</div>`;
 
   const st = S.settings;
   html += `<h2>Напоминания</h2><div class="card">
@@ -577,16 +586,20 @@ function projectSheet(draft) {
     <div class="card">
       <div class="row" style="gap:8px"><label class="f" style="width:72px"><span>Иконка</span><input class="inp" data-pf="emoji" value="${esc(draft.emoji)}" maxlength="4"></label>
       <label class="f grow"><span>Название</span><input class="inp" data-pf="name" value="${esc(draft.name)}" placeholder="Скрытая Физика"></label></div>
-      <label class="f"><span>Выпуск каждые N дней (для подсказки даты)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
+      <label class="f"><span>Папка проекта на Google Диске (ссылка)</span><input class="inp" data-pf="drive_folder" value="${esc(draft.drive_folder)}" placeholder="https://drive.google.com/drive/folders/…"></label>
+      <label class="f"><span>Выпуск каждые N дней (дата выхода нового выпуска)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
+      <label class="f"><span>Озвучка: через сколько дней после сценария (0 — в тот же день; пусто — по дате выхода)</span><input class="inp" type="number" min="0" data-pf="voice_days" value="${draft.voice_days ?? ""}"></label>
       <span class="muted small">За сколько дней до выхода должен быть готов этап:</span>
       <div class="grid4" style="margin-top:4px">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><input class="inp" type="number" min="0" data-pf="${s}_offset" value="${draft[s + "_offset"]}"></label>`).join("")}</div>
     </div>
+    ${isNew ? "" : `<h2>Темы в группе</h2><div class="card small">${KINDS.map((k) => `${k.e} ${k.n}: ${topicBound(draft.id, k.id) ? "✅" : "⚠️ не привязана"}`).join("<br>")}
+      <div class="muted" style="margin-top:6px">Привязка — командой /bind внутри нужной темы.</div></div>`}
     <h2>Ответственные</h2><div class="card">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><select class="inp" data-role="${s}">${memberOptions(draft.roles[s])}</select></label>`).join("")}
       <div class="muted small">Незакрытые задачи прежнего ответственного перейдут новому.</div></div>
     <h2>Языковые каналы</h2><div class="card">
-      <div class="lang-row muted small"><span>Язык</span><span>Название канала / ссылка</span><span></span></div>
+      <div class="lang-row muted small"><span>Язык</span><span>Ссылка на YouTube-канал (для автоотметки выкладки)</span><span></span></div>
       ${draft.channels.map((c, i) => `<div class="lang-row"><input class="inp" data-ch="${i}" data-k="lang" value="${esc(c.lang)}" placeholder="en" maxlength="5">
-        <input class="inp" data-ch="${i}" data-k="name" value="${esc(c.name || "")}" placeholder="${flag(c.lang)} название или YouTube-ссылка">
+        <input class="inp" data-ch="${i}" data-k="youtube_url" value="${esc(c.youtube_url || "")}" placeholder="${flag(c.lang)} https://youtube.com/@канал">
         <button class="icon-btn" data-act="ch-del" data-i="${i}">✕</button></div>`).join("")}
       <button class="btn ghost sm" data-act="ch-add">+ язык</button>
       ${isNew ? "" : `<div class="muted small" style="margin-top:6px">Удаление языка удалит его задачи во всех выпусках.</div>`}</div>
@@ -598,8 +611,15 @@ function projectSheet(draft) {
 function openProject(id) {
   const p = proj(id);
   const draft = p
-    ? { ...p, channels: projChannels(id).map((c) => ({ id: c.id, lang: c.lang, name: c.name || c.youtube_url || "" })), roles: {} }
-    : { id: 0, name: "", emoji: "🎬", cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, roles: {}, channels: ["ru", "en", "es", "de", "fr"].map((lang) => ({ lang, name: "" })) };
+    ? {
+      ...p, roles: {},
+      drive_folder: p.drive_folder_id ? `https://drive.google.com/drive/folders/${p.drive_folder_id}` : "",
+      channels: projChannels(id).map((c) => ({ id: c.id, lang: c.lang, name: c.name || "", youtube_url: c.youtube_url || "" })),
+    }
+    : {
+      id: 0, name: "", emoji: "🎬", cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, voice_days: 0,
+      drive_folder: "", roles: {}, channels: ["ru", "en", "de", "pl", "es"].map((lang) => ({ lang, name: "", youtube_url: "" })),
+    };
   for (const s of STAGES) {
     const r = S.roles.find((x) => x.project_id === id && x.stage === s);
     // для нового проекта подставляем роли из первого существующего
@@ -612,7 +632,7 @@ function openProject(id) {
 
 function readProjectForm() {
   const d = ui.draft;
-  document.querySelectorAll("#sheet [data-pf]").forEach((el) => { d[el.dataset.pf] = el.type === "number" ? Number(el.value) : el.value; });
+  document.querySelectorAll("#sheet [data-pf]").forEach((el) => { d[el.dataset.pf] = el.type === "number" && el.value !== "" ? Number(el.value) : el.value; });
   document.querySelectorAll("#sheet [data-role]").forEach((el) => { d.roles[el.dataset.role] = el.value ? Number(el.value) : null; });
   document.querySelectorAll("#sheet [data-ch]").forEach((el) => { d.channels[Number(el.dataset.ch)][el.dataset.k] = el.value.trim(); });
 }
@@ -651,7 +671,7 @@ const handlers = {
   "open-link": (el, ev) => { ev.preventDefault(); if (tg && tg.openLink && tg.initData) tg.openLink(el.href); else window.open(el.href, "_blank"); },
   "del-link": async (el) => { if (await confirmBox("Удалить ссылку?")) act("link.delete", { id: Number(el.dataset.id) }); },
   "del-episode": async (el) => {
-    if (await confirmBox("Удалить выпуск со всеми задачами? Карточка в группе тоже удалится.")) {
+    if (await confirmBox("Удалить выпуск со всеми задачами? Посты в группе тоже удалятся.")) {
       const ok = await act("episode.delete", { id: Number(el.dataset.id) }, "Удалено");
       if (ok) closeSheet();
     }
@@ -663,20 +683,17 @@ const handlers = {
       project_id: Number(document.getElementById("ne-project").value), title,
       code: document.getElementById("ne-code").value.trim() || undefined,
       publish_date: document.getElementById("ne-date").value || undefined,
-    }, "🎬 Выпуск создан, карточка в группе");
+    }, "🎬 Выпуск создан, пост в группе");
     if (r) openSheet(episodeSheet(r.id));
   },
   "edit-project": (el) => openProject(Number(el.dataset.id)),
-  "ch-add": () => { readProjectForm(); ui.draft.channels.push({ lang: "", name: "" }); ui.sheet.render(); },
+  "ch-add": () => { readProjectForm(); ui.draft.channels.push({ lang: "", name: "", youtube_url: "" }); ui.sheet.render(); },
   "ch-del": (el) => { readProjectForm(); ui.draft.channels.splice(Number(el.dataset.i), 1); ui.sheet.render(); },
   "save-project": async () => {
     readProjectForm();
     const d = ui.draft;
     if (!d.name.trim()) return toast("Нужно название");
-    const channels = d.channels.filter((c) => c.lang).map((c) => {
-      const isUrl = /^https?:\/\//.test(c.name || "");
-      return { id: c.id, lang: c.lang, name: isUrl ? null : c.name || null, youtube_url: isUrl ? c.name : null };
-    });
+    const channels = d.channels.filter((c) => c.lang).map((c) => ({ id: c.id, lang: c.lang, name: c.name || null, youtube_url: c.youtube_url || null }));
     const r = await act("project.save", { ...d, channels }, "Сохранено");
     if (r) closeSheet();
   },

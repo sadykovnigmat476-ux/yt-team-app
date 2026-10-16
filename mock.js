@@ -4,20 +4,22 @@
   const today = iso(new Date());
   const add = (d, n) => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
   const STAGES = ["script", "voice", "edit", "upload"];
-  const langs = ["ru", "en", "es", "de", "fr"];
+  const langs = ["ru", "en", "de", "pl", "es"];
 
   const st = {
     me: { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true },
     members: [
       { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true },
-      { tg_id: 2, name: "Партнёр", username: "partner", is_admin: false, can_dm: false },
+      { tg_id: 2, name: "Павел", username: "pavel", is_admin: false, can_dm: false },
     ],
     projects: [
-      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: 11, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1 },
+      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1 },
       { id: 2, name: "Тактика Боя", emoji: "⚔️", thread_id: 12, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 2 },
       { id: 3, name: "Channel #1", emoji: "🪐", thread_id: null, cadence_days: 4, script_offset: 6, voice_offset: 4, edit_offset: 2, upload_offset: 0, sort: 3 },
     ],
     channels: [], episodes: [], tasks: [], links: [], roles: [],
+    topics: [{ project_id: 1, kind: "script", thread_id: 21 }, { project_id: 1, kind: "voice", thread_id: 22 }, { project_id: 1, kind: "video", thread_id: 23 }],
+    drive: { enabled: true, email: "yt-bot@yt-bot-123.iam.gserviceaccount.com" },
     settings: { timezone: "Europe/Moscow", morning_hour: 9, evening_hour: 20, group_linked: true },
   };
   let cid = 1, eid = 1, tid = 1, lid = 1;
@@ -69,7 +71,8 @@
       case "project.save": {
         let p = st.projects.find((x) => x.id === b.id);
         if (!p) { p = { id: Math.max(...st.projects.map((x) => x.id)) + 1, thread_id: null }; st.projects.push(p); }
-        for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset"]) p[k] = b[k];
+        for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days"]) p[k] = b[k];
+        p.drive_folder_id = (String(b.drive_folder || "").match(/folders\/([\w-]+)/) || [])[1] || null;
         st.channels = st.channels.filter((c) => c.project_id !== p.id || b.channels.some((x) => x.id === c.id));
         b.channels.forEach((c, i) => { const ex = st.channels.find((x) => x.id === c.id); if (ex) Object.assign(ex, c, { sort: i }); else st.channels.push({ ...c, id: cid++, project_id: p.id, sort: i }); });
         for (const s of STAGES) { st.roles = st.roles.filter((r) => !(r.project_id === p.id && r.stage === s)); st.roles.push({ project_id: p.id, stage: s, member_id: b.roles[s] }); }
