@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>YouTube команда</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --bg2: var(--tg-theme-secondary-bg-color, #f2f3f5);
+    --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, #ffffff));
+    --text: var(--tg-theme-text-color, #111111);
+    --hint: var(--tg-theme-hint-color, #8a8f98);
+    --link: var(--tg-theme-link-color, #2a7de1);
+    --accent: var(--tg-theme-button-color, #2a7de1);
+    --accent-text: var(--tg-theme-button-text-color, #ffffff);
+    --danger: var(--tg-theme-destructive-text-color, #e5484d);
+    --sep: color-mix(in srgb, var(--hint) 22%, transparent);
+    --ok: #2fa463;
+    --warn: #e0a100;
+    --ok-bg: color-mix(in srgb, var(--ok) 16%, transparent);
+    --warn-bg: color-mix(in srgb, var(--warn) 18%, transparent);
+    --danger-bg: color-mix(in srgb, var(--danger) 14%, transparent);
+    --accent-bg: color-mix(in srgb, var(--accent) 14%, transparent);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(.tg) { --bg: #17181c; --bg2: #0f1013; --card: #1f2127; --text: #f1f2f4; --hint: #8b919c; }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg2); color: var(--text); font: 15px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); overscroll-behavior-y: none; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  a { color: var(--link); text-decoration: none; }
+  main { padding: 12px 12px 24px; max-width: 720px; margin: 0 auto; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); font-weight: 600; margin: 18px 4px 8px; }
+  h2:first-child { margin-top: 4px; }
+  .card { background: var(--card); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; min-width: 0; }
+  .muted { color: var(--hint); font-size: 13px; }
+  .small { font-size: 13px; }
+  .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title { font-weight: 600; }
+  .empty { text-align: center; color: var(--hint); padding: 32px 16px; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; border: 0; border-radius: 999px; padding: 5px 10px; background: var(--bg2); font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .chip.on { background: var(--accent); color: var(--accent-text); }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .lang { min-width: 52px; justify-content: center; }
+  .lang.done { background: var(--ok-bg); color: var(--ok); }
+  .lang.active { background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+  .lang.blocked { opacity: .45; }
+  .badge { font-size: 12px; border-radius: 6px; padding: 1px 6px; background: var(--bg2); color: var(--hint); white-space: nowrap; }
+  .badge.late { background: var(--danger-bg); color: var(--danger); }
+  .badge.today { background: var(--warn-bg); color: var(--warn); }
+  .badge.ok { background: var(--ok-bg); color: var(--ok); }
+
+  .btn { border: 0; border-radius: 10px; padding: 10px 14px; background: var(--accent); color: var(--accent-text); font-weight: 600; cursor: pointer; }
+  .btn.ghost { background: var(--bg2); color: var(--text); font-weight: 500; }
+  .btn.danger { background: var(--danger-bg); color: var(--danger); }
+  .btn.sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+  .btn.block { width: 100%; }
+  .btn:disabled { opacity: .5; }
+  .icon-btn { border: 0; background: none; padding: 4px 6px; cursor: pointer; color: var(--hint); font-size: 16px; }
+
+  .progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 8px; }
+  .progress i { height: 5px; border-radius: 3px; background: var(--sep); position: relative; overflow: hidden; }
+  .progress i b { position: absolute; inset: 0 auto 0 0; background: var(--ok); }
+  .progress i.active { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+  .progress i.late { background: color-mix(in srgb, var(--danger) 35%, transparent); }
+  .stage-labels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; font-size: 11px; color: var(--hint); margin-top: 3px; }
+
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--sep); padding-bottom: env(safe-area-inset-bottom); z-index: 5; }
+  nav button { flex: 1; border: 0; background: none; padding: 8px 0 10px; font-size: 11px; color: var(--hint); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  nav button span { font-size: 20px; line-height: 1.1; filter: grayscale(1); opacity: .7; }
+  nav button.on { color: var(--accent); font-weight: 600; }
+  nav button.on span { filter: none; opacity: 1; }
+  .fab { position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 54px; height: 54px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-text); font-size: 28px; box-shadow: 0 4px 14px rgba(0,0,0,.2); cursor: pointer; z-index: 6; }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
+  .cal-head b { font-size: 17px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal .wd { text-align: center; font-size: 11px; color: var(--hint); padding-bottom: 2px; }
+  .day { background: var(--card); border-radius: 10px; min-height: 58px; padding: 4px; border: 2px solid transparent; cursor: pointer; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+  .day.out { opacity: .35; }
+  .day.today { border-color: var(--accent); }
+  .day.sel { background: var(--accent-bg); }
+  .day .n { font-size: 12px; font-weight: 600; }
+  .day .ev { font-size: 13px; line-height: 1.1; letter-spacing: -1px; }
+  .day .dl { display: flex; gap: 2px; flex-wrap: wrap; }
+  .day .dl i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .day .dl i.late { background: var(--danger); }
+  .day .dl i.ok { background: var(--ok); }
+
+  .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; display: none; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto; background: var(--bg2); border-radius: 18px 18px 0 0; padding: 8px 12px calc(24px + env(safe-area-inset-bottom)); z-index: 21; display: none; max-width: 720px; margin: 0 auto; }
+  .sheet.open, .sheet-bg.open { display: block; }
+  .sheet .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--sep); margin: 2px auto 10px; }
+  .sheet-title { display: flex; align-items: center; gap: 8px; margin: 0 4px 10px; }
+  .sheet-title b { font-size: 18px; flex: 1; }
+
+  label.f { display: block; margin-bottom: 10px; }
+  label.f > span { display: block; font-size: 12px; color: var(--hint); margin: 0 2px 4px; }
+  .inp { width: 100%; border: 1px solid var(--sep); background: var(--card); border-radius: 10px; padding: 9px 11px; outline: none; }
+  .inp:focus { border-color: var(--accent); }
+  textarea.inp { resize: vertical; min-height: 64px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .stage-box { background: var(--card); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
+  .stage-box .head { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .stage-box select, .stage-box input[type=date] { border: 1px solid var(--sep); background: var(--bg2); border-radius: 8px; padding: 4px 6px; font-size: 13px; max-width: 46%; }
+  .link-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--sep); }
+  .link-row:first-child { border-top: 0; }
+  .lang-row { display: grid; grid-template-columns: 64px 1fr 30px; gap: 6px; margin-bottom: 6px; }
+  .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: rgba(20,20,20,.9); color: #fff; padding: 8px 14px; border-radius: 10px; font-size: 14px; z-index: 50; display: none; max-width: 90vw; text-align: center; }
+  .toast.show { display: block; }
+  .loading { text-align: center; padding: 60px 16px; color: var(--hint); }
+  .member { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--sep); }
+  .member:first-child { border-top: 0; }
+  .ava { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); display: grid; place-items: center; font-weight: 700; }
+  .clickable { cursor: pointer; }
+</style>
+</head>
+<body>
+<main id="view"><div class="loading">Загрузка…</div></main>
+<button class="fab" id="fab" data-act="new-episode" aria-label="Новый выпуск" hidden>+</button>
+<nav id="tabs"></nav>
+<div class="sheet-bg" id="sheet-bg" data-act="close-sheet"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const tg = window.Telegram && window.Telegram.WebApp;
+const qs = new URLSearchParams(location.search);
+const MOCK = qs.has("mock");
+const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || "";
+
+const STAGES = ["script", "voice", "edit", "upload"];
+const META = {
+  script: { e: "📝", n: "Сценарий" }, voice: { e: "🎙", n: "Озвучка" },
+  edit: { e: "🎞", n: "Монтаж" }, upload: { e: "📤", n: "Выкладка" },
+};
+const PREV = { script: null, voice: "script", edit: "voice", upload: "edit" };
+const FLAGS = { ru: "🇷🇺", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪", fr: "🇫🇷", pt: "🇧🇷", it: "🇮🇹", tr: "🇹🇷", ar: "🇸🇦", hi: "🇮🇳", id: "🇮🇩", ja: "🇯🇵", ko: "🇰🇷", zh: "🇨🇳", uk: "🇺🇦", pl: "🇵🇱", uz: "🇺🇿", kk: "🇰🇿", vi: "🇻🇳", th: "🇹🇭", nl: "🇳🇱" };
+const WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+const MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const TABS = [
+  { id: "my", e: "✅", n: "Мои" },
+  { id: "episodes", e: "🎬", n: "Выпуски" },
+  { id: "calendar", e: "🗓", n: "Календарь" },
+  { id: "settings", e: "⚙️", n: "Настройки" },
+];
+
+let S = null;
+const ui = { tab: store("tab") || "my", project: store("project") || "all", showDone: false, month: null, day: null, sheet: null };
+
+function store(k, v) {
+  try {
+    if (v === undefined) return localStorage.getItem("yt." + k);
+    localStorage.setItem("yt." + k, v);
+  } catch (_) { return null; }
+}
+
+// ---------- утилиты ----------
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const flag = (l) => FLAGS[(l || "").toLowerCase()] || "🏳️";
+const dParse = (d) => new Date(d + "T00:00:00Z");
+const addDays = (d, n) => { const x = dParse(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const weekday = (d) => (dParse(d).getUTCDay() + 6) % 7;
+const daysBetween = (a, b) => Math.round((dParse(b) - dParse(a)) / 86400000);
+function fmt(d, wd) {
+  if (!d) return "";
+  const [, m, day] = d.split("-").map(Number);
+  return (wd ? WD[weekday(d)] + ", " : "") + day + " " + MON[m - 1];
+}
+function rel(d) {
+  const n = daysBetween(S.today, d);
+  if (n === 0) return "сегодня";
+  if (n === 1) return "завтра";
+  if (n === -1) return "вчера";
+  return n < 0 ? `${-n} дн. назад` : `через ${n} дн.`;
+}
+function dueBadge(d, done) {
+  if (!d) return "";
+  if (done) return `<span class="badge ok">✓</span>`;
+  const n = daysBetween(S.today, d);
+  const cls = n < 0 ? "late" : n === 0 ? "today" : "";
+  return `<span class="badge ${cls}">${n < 0 ? "⚠️ " : ""}${fmt(d)}</span>`;
+}
+const haptic = (t) => { try { tg && tg.HapticFeedback && (t === "light" ? tg.HapticFeedback.impactOccurred("light") : tg.HapticFeedback.notificationOccurred(t)); } catch (_) {} };
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => el.classList.remove("show"), 2600);
+}
+function confirmBox(text) {
+  return new Promise((res) => {
+    if (tg && tg.showConfirm && tg.initData) tg.showConfirm(text, (ok) => res(ok));
+    else res(window.confirm(text));
+  });
+}
+
+// ---------- данные ----------
+const ep = (id) => S.episodes.find((e) => e.id === id);
+const proj = (id) => S.projects.find((p) => p.id === id);
+const chan = (id) => S.channels.find((c) => c.id === id);
+const mem = (id) => S.members.find((m) => m.tg_id === id);
+const epTasks = (id) => S.tasks.filter((t) => t.episode_id === id);
+const projChannels = (pid) => S.channels.filter((c) => c.project_id === pid).sort((a, b) => a.sort - b.sort);
+const chSort = (t) => (chan(t.channel_id) || { sort: -1 }).sort;
+
+function blocker(t) {
+  const prev = PREV[t.stage];
+  if (!prev) return null;
+  return S.tasks.find((x) => x.episode_id === t.episode_id && x.stage === prev && (prev === "script" || x.channel_id === t.channel_id)) || null;
+}
+function isActive(t) {
+  if (t.done_at) return false;
+  const b = blocker(t);
+  return !b || !!b.done_at;
+}
+function stageInfo(eid, stage) {
+  const ts = epTasks(eid).filter((t) => t.stage === stage).sort((a, b) => chSort(a) - chSort(b));
+  const done = ts.filter((t) => t.done_at).length;
+  const active = ts.filter(isActive).length;
+  const due = ts.map((t) => t.due_date).filter(Boolean).sort()[0] || null;
+  const late = done < ts.length && active > 0 && due && due < S.today;
+  return { ts, done, total: ts.length, active, due, late };
+}
+function episodeDone(eid) {
+  const ts = epTasks(eid);
+  return ts.length > 0 && ts.every((t) => t.done_at);
+}
+
+async function api(action, body = {}) {
+  if (MOCK) return window.MOCK_API(action, body);
+  if (!API_URL) throw new Error("Не задан адрес API (config.js)");
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-init-data": (tg && tg.initData) || "" },
+    body: JSON.stringify({ action, ...body }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || `Ошибка ${res.status}`);
+  return json;
+}
+
+async function load() {
+  S = await api("state");
+  if (!ui.month) ui.month = S.today.slice(0, 7);
+  if (ui.project !== "all" && !proj(Number(ui.project))) ui.project = "all";
+  render();
+}
+
+async function act(action, body, msg) {
+  try {
+    const r = await api(action, body);
+    haptic("success");
+    if (msg) toast(msg);
+    await load();
+    return r || {};
+  } catch (e) {
+    haptic("error");
+    toast(e.message);
+    return null;
+  }
+}
+
+// ---------- рендер ----------
+function render() {
+  document.getElementById("tabs").innerHTML = TABS.map((t) =>
+    `<button class="${ui.tab === t.id ? "on" : ""}" data-act="tab" data-tab="${t.id}"><span>${t.e}</span>${t.n}</button>`).join("");
+  document.getElementById("fab").hidden = !(S.projects.length && (ui.tab === "episodes" || ui.tab === "calendar" || ui.tab === "my"));
+  const v = document.getElementById("view");
+  v.innerHTML = { my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, settings: viewSettings }[ui.tab]();
+  if (ui.sheet) ui.sheet.render();
+}
+
+function onboarding() {
+  if (S.projects.length) return "";
+  return `<div class="card"><div class="title">👋 Начнём</div>
+    <p class="small">Создай проекты (во вкладке «Настройки» или командой <code>/project Название; ru en es de fr</code> в теме группы), назначь ответственных — и добавляй выпуски.</p>
+    ${S.me.is_admin ? `<button class="btn" data-act="edit-project" data-id="0">+ Создать проект</button>` : ""}</div>`;
+}
+
+// --- Мои задачи
+function myGroups() {
+  const mine = S.tasks.filter((t) => t.assignee_id === S.me.tg_id && !t.done_at);
+  const map = new Map();
+  for (const t of mine) {
+    const k = t.episode_id + ":" + t.stage;
+    if (!map.has(k)) map.set(k, { eid: t.episode_id, stage: t.stage });
+  }
+  return [...map.values()].map((g) => {
+    const info = stageInfo(g.eid, g.stage);
+    const myOpen = info.ts.filter((t) => t.assignee_id === S.me.tg_id && !t.done_at);
+    const activeMine = myOpen.filter(isActive);
+    const due = activeMine.map((t) => t.due_date).filter(Boolean).sort()[0] || info.due;
+    return { ...g, info, activeMine, due, waiting: activeMine.length === 0 };
+  }).filter((g) => ep(g.eid)).sort((a, b) => (a.due || "9").localeCompare(b.due || "9"));
+}
+
+function taskGroupCard(g) {
+  const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
+  const langs = g.stage === "script" ? "" : `<div class="chips" style="margin-top:8px">${g.info.ts.map(langChip).join("")}</div>`;
+  const all = g.activeMine.length > 1
+    ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine.map((t) => t.id).join(",")}">Все ${g.activeMine.length} готовы</button>`
+    : g.activeMine.length === 1 && g.stage === "script"
+      ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine[0].id}">Готово</button>` : "";
+  const waitTxt = g.waiting ? `<div class="muted" style="margin-top:6px">⏳ ждёт: ${META[PREV[g.stage]].n.toLowerCase()}</div>` : "";
+  return `<div class="card">
+    <div class="row"><div class="grow clickable" data-act="open-episode" data-id="${e.id}">
+      <div class="ellipsis"><b>${m.e} ${m.n}</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}</div>
+      <div class="muted ellipsis">«${esc(e.title)}» · выход ${fmt(e.publish_date)}</div></div>
+      ${g.waiting ? "" : dueBadge(g.due)}</div>
+    ${langs}${waitTxt}${all ? `<div class="row" style="margin-top:8px;justify-content:flex-end">${all}</div>` : ""}</div>`;
+}
+
+function langChip(t) {
+  const c = chan(t.channel_id);
+  const st = t.done_at ? "done" : isActive(t) ? "active" : "blocked";
+  return `<button class="chip lang ${st}" data-act="toggle" data-id="${t.id}">${flag(c && c.lang)} ${esc((c && c.lang || "?").toUpperCase())}${t.done_at ? " ✓" : ""}</button>`;
+}
+
+function viewMy() {
+  const gs = myGroups();
+  const active = gs.filter((g) => !g.waiting);
+  const sec = (title, list) => list.length ? `<h2>${title}</h2>${list.map(taskGroupCard).join("")}` : "";
+  const overdue = active.filter((g) => g.due && g.due < S.today);
+  const today = active.filter((g) => g.due === S.today);
+  const soon = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) <= 7);
+  const later = active.filter((g) => !g.due || daysBetween(S.today, g.due) > 7);
+  const waiting = gs.filter((g) => g.waiting);
+  const unassigned = S.tasks.filter((t) => !t.done_at && t.assignee_id == null).length;
+  let html = onboarding();
+  html += `<div class="muted" style="margin:0 4px 6px">${fmt(S.today, true)} · привет, ${esc(S.me.name)}</div>`;
+  if (!active.length && !waiting.length && S.projects.length) html += `<div class="empty">🎉 Задач нет.<br>Отдыхай или добавь новый выпуск.</div>`;
+  html += sec("⚠️ Просрочено", overdue) + sec("📌 Сегодня", today) + sec("🔜 На неделе", soon) + sec("Позже", later) + sec("⏳ Ждут предыдущего этапа", waiting);
+  if (unassigned) html += `<div class="card small">⚠️ ${unassigned} задач(и) без ответственного — назначь роли в <a href="#" data-act="tab" data-tab="settings">Настройках</a>.</div>`;
+  return html;
+}
+
+// --- Выпуски
+function projectChips() {
+  return `<div class="chips"><button class="chip ${ui.project === "all" ? "on" : ""}" data-act="filter" data-p="all">Все</button>${
+    S.projects.map((p) => `<button class="chip ${String(p.id) === ui.project ? "on" : ""}" data-act="filter" data-p="${p.id}">${esc(p.emoji)} ${esc(p.name)}</button>`).join("")}</div>`;
+}
+
+function episodeRow(e) {
+  const p = proj(e.project_id);
+  const bars = STAGES.map((st) => {
+    const i = stageInfo(e.id, st);
+    const pct = i.total ? Math.round(i.done / i.total * 100) : 0;
+    return `<i class="${i.late ? "late" : i.active ? "active" : ""}" title="${META[st].n}"><b style="width:${pct}%"></b></i>`;
+  }).join("");
+  const done = episodeDone(e.id);
+  const anyLate = STAGES.some((st) => stageInfo(e.id, st).late);
+  const badge = done ? `<span class="badge ok">готово</span>` : `<span class="badge ${anyLate ? "late" : daysBetween(S.today, e.publish_date) <= 0 ? "today" : ""}">${fmt(e.publish_date)}</span>`;
+  return `<div class="card clickable" data-act="open-episode" data-id="${e.id}">
+    <div class="row"><div class="grow"><div class="ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div>
+    <div class="muted ellipsis">${esc(p.emoji)} ${esc(p.name)} · ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}</div></div>${badge}</div>
+    <div class="progress">${bars}</div>
+    <div class="stage-labels">${STAGES.map((s) => `<span>${META[s].e} ${META[s].n}</span>`).join("")}</div></div>`;
+}
+
+function viewEpisodes() {
+  let list = S.episodes.filter((e) => ui.project === "all" || String(e.project_id) === ui.project);
+  const done = list.filter((e) => episodeDone(e.id));
+  const active = list.filter((e) => !episodeDone(e.id));
+  let html = onboarding() + projectChips();
+  html += active.length ? active.map(episodeRow).join("") : (S.projects.length ? `<div class="empty">Активных выпусков нет.<br>Жми «+», чтобы добавить.</div>` : "");
+  if (done.length) {
+    html += `<h2 class="clickable" data-act="toggle-done">${ui.showDone ? "▾" : "▸"} Готовые (${done.length})</h2>`;
+    if (ui.showDone) html += done.slice().reverse().map(episodeRow).join("");
+  }
+  return html;
+}
+
+// --- Календарь
+function dayEvents(d) {
+  const pubs = S.episodes.filter((e) => e.publish_date === d && (ui.project === "all" || String(e.project_id) === ui.project));
+  const map = new Map();
+  for (const t of S.tasks) {
+    if (t.due_date !== d || t.stage === "upload") continue;
+    const e = ep(t.episode_id);
+    if (!e || (ui.project !== "all" && String(e.project_id) !== ui.project)) continue;
+    const k = t.episode_id + ":" + t.stage;
+    const g = map.get(k) || { eid: t.episode_id, stage: t.stage, open: 0, total: 0 };
+    g.total++;
+    if (!t.done_at) g.open++;
+    map.set(k, g);
+  }
+  return { pubs, dls: [...map.values()] };
+}
+
+function viewCalendar() {
+  const [y, m] = ui.month.split("-").map(Number);
+  const first = `${ui.month}-01`;
+  const start = addDays(first, -weekday(first));
+  let cells = "";
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(start, i);
+    if (i >= 35 && d.slice(0, 7) !== ui.month) break;
+    const { pubs, dls } = dayEvents(d);
+    const cls = ["day", d.slice(0, 7) !== ui.month && "out", d === S.today && "today", d === ui.day && "sel"].filter(Boolean).join(" ");
+    const ev = pubs.slice(0, 4).map((e) => episodeDone(e.id) ? "✅" : esc(proj(e.project_id).emoji)).join("") + (pubs.length > 4 ? "…" : "");
+    const dots = dls.slice(0, 8).map((g) => `<i class="${g.open === 0 ? "ok" : d < S.today ? "late" : ""}"></i>`).join("");
+    cells += `<div class="${cls}" data-act="day" data-d="${d}"><span class="n">${Number(d.slice(8))}</span><span class="ev">${ev}</span><span class="dl">${dots}</span></div>`;
+  }
+  let html = projectChips();
+  html += `<div class="cal-head"><button class="btn ghost sm" data-act="month" data-dir="-1">‹</button><b>${MONTHS[m - 1]} ${y}</b><button class="btn ghost sm" data-act="month" data-dir="1">›</button></div>`;
+  html += `<div class="cal">${WD.map((w) => `<div class="wd">${w}</div>`).join("")}${cells}</div>`;
+  html += `<div class="muted small" style="margin:8px 4px">Значок проекта — день выхода, точки — сроки этапов (красные — просрочены, зелёные — сделаны).</div>`;
+  const d = ui.day || S.today;
+  const { pubs, dls } = dayEvents(d);
+  html += `<h2>${fmt(d, true)}${d === S.today ? " · сегодня" : ""}</h2>`;
+  if (!pubs.length && !dls.length) html += `<div class="card muted">Ничего не запланировано</div>`;
+  for (const e of pubs) {
+    const p = proj(e.project_id);
+    html += `<div class="card clickable row" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>📤 Выход</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">«${esc(e.title)}» · ${projChannels(p.id).length} каналов</div></div>${episodeDone(e.id) ? `<span class="badge ok">готово</span>` : ""}</div>`;
+  }
+  for (const g of dls) {
+    const e = ep(g.eid), p = proj(e.project_id);
+    const who = [...new Set(epTasks(e.id).filter((t) => t.stage === g.stage).map((t) => (mem(t.assignee_id) || { name: "—" }).name))].join(", ");
+    html += `<div class="card clickable row" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>${META[g.stage].e} ${META[g.stage].n}</b> · ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">${esc(who)} · «${esc(e.title)}»</div></div><span class="badge ${g.open === 0 ? "ok" : d < S.today ? "late" : ""}">${g.open === 0 ? "✓" : g.total > 1 ? `${g.total - g.open}/${g.total}` : "срок"}</span></div>`;
+  }
+  return html;
+}
+
+// --- Настройки
+function viewSettings() {
+  const admin = S.me.is_admin;
+  let html = `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
+      <div class="ava">${esc(m.name.slice(0, 1).toUpperCase())}</div>
+      <div class="grow"><div>${esc(m.name)}${m.tg_id === S.me.tg_id ? " <span class='muted'>(ты)</span>" : ""}</div>
+      <div class="muted">${m.username ? "@" + esc(m.username) + " · " : ""}${m.is_admin ? "админ" : "участник"}${m.can_dm ? "" : " · ⚠️ не писал боту в личку"}</div></div>
+      ${admin || m.tg_id === S.me.tg_id ? `<button class="icon-btn" data-act="rename" data-id="${m.tg_id}" title="Переименовать">✏️</button>` : ""}
+    </div>`).join("")}
+    <div class="muted small" style="margin-top:6px">Новые люди появляются здесь сами, когда нажмут кнопку в группе или напишут боту /start.</div></div>`;
+
+  html += `<h2>Проекты</h2>`;
+  for (const p of S.projects) {
+    const chs = projChannels(p.id);
+    const roles = STAGES.map((st) => {
+      const r = S.roles.find((x) => x.project_id === p.id && x.stage === st);
+      return `${META[st].e} ${esc((mem(r && r.member_id) || { name: "—" }).name)}`;
+    }).join(" · ");
+    html += `<div class="card ${admin ? "clickable" : ""}" ${admin ? `data-act="edit-project" data-id="${p.id}"` : ""}>
+      <div class="row"><div class="grow"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted">${chs.map((c) => flag(c.lang) + " " + esc(c.lang.toUpperCase())).join("  ") || "нет каналов"}</div>
+      <div class="muted">${roles}</div><div class="muted">выпуск каждые ${p.cadence_days} дн.${p.thread_id ? "" : " · ⚠️ тема в группе не привязана"}</div></div>${admin ? "›" : ""}</div></div>`;
+  }
+  if (admin) html += `<button class="btn ghost block" data-act="edit-project" data-id="0">+ Новый проект</button>`;
+
+  const st = S.settings;
+  html += `<h2>Напоминания</h2><div class="card">
+    <label class="f"><span>Часовой пояс команды</span><input class="inp" id="set-tz" list="tz-list" value="${esc(st.timezone)}" ${admin ? "" : "disabled"}></label>
+    <datalist id="tz-list">${["Europe/Moscow", "Asia/Tashkent", "Asia/Almaty", "Asia/Yekaterinburg", "Europe/Samara", "Europe/Kyiv", "Asia/Bishkek", "Asia/Dushanbe", "Asia/Baku", "Europe/Istanbul", "Europe/Berlin", Intl.DateTimeFormat().resolvedOptions().timeZone].filter((v, i, a) => a.indexOf(v) === i).map((z) => `<option value="${z}">`).join("")}</datalist>
+    <div class="grid2"><label class="f"><span>Утренний план, час</span><input class="inp" id="set-morning" type="number" min="0" max="23" value="${st.morning_hour}" ${admin ? "" : "disabled"}></label>
+    <label class="f"><span>Вечернее напоминание, час</span><input class="inp" id="set-evening" type="number" min="0" max="23" value="${st.evening_hour}" ${admin ? "" : "disabled"}></label></div>
+    ${admin ? `<button class="btn block" data-act="save-settings">Сохранить</button>` : ""}
+    <div class="muted small" style="margin-top:8px">${st.group_linked ? "✅ Группа подключена." : "⚠️ Группа не подключена: добавь бота в группу админом и напиши там /setup."} По понедельникам бот кладёт план недели в тему, привязанную командой /bind → «дайджесты».</div></div>`;
+  return html;
+}
+
+// ---------- шторка ----------
+function openSheet(renderFn) {
+  ui.sheet = { render: () => { document.getElementById("sheet").innerHTML = `<div class="grip"></div>` + renderFn(); } };
+  ui.sheet.render();
+  document.getElementById("sheet").classList.add("open");
+  document.getElementById("sheet-bg").classList.add("open");
+  document.getElementById("sheet").scrollTop = 0;
+  if (tg && tg.BackButton) tg.BackButton.show();
+}
+function closeSheet() {
+  ui.sheet = null;
+  document.getElementById("sheet").classList.remove("open");
+  document.getElementById("sheet-bg").classList.remove("open");
+  if (tg && tg.BackButton) tg.BackButton.hide();
+}
+
+function memberOptions(selected, emptyLabel = "— никто") {
+  return `<option value="">${emptyLabel}</option>` + S.members.map((m) => `<option value="${m.tg_id}" ${m.tg_id === selected ? "selected" : ""}>${esc(m.name)}</option>`).join("");
+}
+
+function episodeSheet(id) {
+  return () => {
+    const e = ep(id);
+    if (!e) { closeSheet(); return ""; }
+    const p = proj(e.project_id);
+    const links = S.links.filter((l) => l.episode_id === id);
+    let html = `<div class="sheet-title"><b>${esc(p.emoji)} ${esc(p.name)} · ${esc(e.code)}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+      <div class="card">
+        <label class="f"><span>Название</span><input class="inp" data-field="title" value="${esc(e.title)}"></label>
+        <div class="grid2"><label class="f"><span>Код</span><input class="inp" data-field="code" value="${esc(e.code)}"></label>
+        <label class="f"><span>Дата выхода</span><input class="inp" type="date" data-field="publish_date" value="${e.publish_date}"></label></div>
+        <div class="muted small">Сроки этапов пересчитаются от даты выхода.</div>
+      </div>`;
+    for (const st of STAGES) {
+      const i = stageInfo(id, st);
+      if (!i.total) continue;
+      const assignees = [...new Set(i.ts.map((t) => t.assignee_id))];
+      const ids = i.ts.map((t) => t.id).join(",");
+      const openActive = i.ts.filter(isActive);
+      const body = st === "script"
+        ? `<button class="chip lang ${i.done ? "done" : "active"}" data-act="toggle" data-id="${i.ts[0].id}">${i.done ? "✓ Готов" : "Отметить готовым"}</button>`
+        : `<div class="chips">${i.ts.map(langChip).join("")}</div>${openActive.length > 1 ? `<button class="btn sm" style="margin-top:6px" data-act="done" data-ids="${openActive.map((t) => t.id).join(",")}">Все ${openActive.length} готовы</button>` : ""}`;
+      html += `<div class="stage-box"><div class="head"><b class="grow">${META[st].e} ${META[st].n}</b>
+        <select data-act-change="assign" data-ids="${ids}">${assignees.length > 1 ? `<option selected>разные</option>` : ""}${memberOptions(assignees.length === 1 ? assignees[0] : undefined)}</select>
+        <input type="date" data-act-change="due" data-ids="${i.ts.filter((t) => !t.done_at).map((t) => t.id).join(",")}" value="${i.due || ""}" ${i.done === i.total ? "disabled" : ""}></div>
+        ${body}${i.late ? `<div class="small" style="color:var(--danger);margin-top:6px">⚠️ срок был ${fmt(i.due)}</div>` : ""}</div>`;
+    }
+    html += `<h2>Ссылки</h2><div class="card">${links.map((l) => `<div class="link-row"><span>${l.stage ? META[l.stage].e : "🔗"}</span><a class="grow ellipsis" href="${esc(l.url)}" data-act="open-link">${esc(l.title || (l.stage ? META[l.stage].n : l.url))}</a><button class="icon-btn" data-act="del-link" data-id="${l.id}">✕</button></div>`).join("") || `<div class="muted">Пока нет. Можно кинуть ссылку ответом на карточку в группе.</div>`}</div>
+      <div class="card"><div class="row" style="gap:6px"><input class="inp grow" id="link-url" placeholder="https://drive.google.com/…"></div>
+      <div class="row" style="margin-top:6px;gap:6px"><input class="inp grow" id="link-title" placeholder="Подпись (необязательно)">
+      <select class="inp" id="link-stage" style="width:auto">${STAGES.map((s) => `<option value="${s}">${META[s].e} ${META[s].n}</option>`).join("")}<option value="">🔗 Другое</option></select></div>
+      <button class="btn block" style="margin-top:8px" data-act="add-link" data-id="${id}">Добавить ссылку</button></div>
+      <h2>Заметки</h2><div class="card"><textarea class="inp" data-field="notes" placeholder="Идеи, правки, тайм-коды…">${esc(e.notes || "")}</textarea></div>
+      <button class="btn danger block" data-act="del-episode" data-id="${id}">Удалить выпуск</button>`;
+    return html;
+  };
+}
+
+function newEpisodeSheet(state) {
+  return () => {
+    const p = proj(state.project_id) || S.projects[0];
+    return `<div class="sheet-title"><b>Новый выпуск</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+    <div class="card">
+      <label class="f"><span>Проект</span><select class="inp" id="ne-project" data-act-change="ne-project">${S.projects.map((x) => `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${esc(x.emoji)} ${esc(x.name)}</option>`).join("")}</select></label>
+      <label class="f"><span>Название</span><input class="inp" id="ne-title" placeholder="Как Эратосфен измерил Землю" value="${esc(state.title || "")}"></label>
+      <div class="grid2"><label class="f"><span>Код (авто)</span><input class="inp" id="ne-code" placeholder="${esc(state.codeHint || "S01")}"></label>
+      <label class="f"><span>Дата выхода</span><input class="inp" type="date" id="ne-date" value="${state.date || ""}"></label></div>
+      <div class="muted small">Будут созданы задачи: сценарий + ${projChannels(p.id).length} × (озвучка, монтаж, выкладка). Сроки — по настройкам проекта: сценарий за ${p.script_offset} дн., озвучка за ${p.voice_offset}, монтаж за ${p.edit_offset}.</div>
+    </div>
+    <button class="btn block" data-act="create-episode">Создать</button>`;
+  };
+}
+
+function nextCode(pid) {
+  let max = 0;
+  for (const e of S.episodes.filter((x) => x.project_id === pid)) {
+    const m = String(e.code).match(/(\d+)\s*$/);
+    if (m) max = Math.max(max, +m[1]);
+  }
+  return "S" + String(max + 1).padStart(2, "0");
+}
+
+async function openNewEpisode() {
+  const pid = ui.project !== "all" ? Number(ui.project) : S.projects[0].id;
+  const state = { project_id: pid, codeHint: nextCode(pid), date: "" };
+  openSheet(newEpisodeSheet(state));
+  ui.newEp = state;
+  await suggestDate(state);
+}
+async function suggestDate(state) {
+  try {
+    const r = await api("episode.suggest", { project_id: state.project_id });
+    state.date = r.publish_date;
+    if (ui.sheet && ui.newEp === state) {
+      const el = document.getElementById("ne-date");
+      if (el && !el.dataset.touched) el.value = state.date;
+    }
+  } catch (_) {}
+}
+
+function projectSheet(draft) {
+  return () => {
+    const isNew = !draft.id;
+    return `<div class="sheet-title"><b>${isNew ? "Новый проект" : "Проект"}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+    <div class="card">
+      <div class="row" style="gap:8px"><label class="f" style="width:72px"><span>Иконка</span><input class="inp" data-pf="emoji" value="${esc(draft.emoji)}" maxlength="4"></label>
+      <label class="f grow"><span>Название</span><input class="inp" data-pf="name" value="${esc(draft.name)}" placeholder="Скрытая Физика"></label></div>
+      <label class="f"><span>Выпуск каждые N дней (для подсказки даты)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
+      <span class="muted small">За сколько дней до выхода должен быть готов этап:</span>
+      <div class="grid4" style="margin-top:4px">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><input class="inp" type="number" min="0" data-pf="${s}_offset" value="${draft[s + "_offset"]}"></label>`).join("")}</div>
+    </div>
+    <h2>Ответственные</h2><div class="card">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><select class="inp" data-role="${s}">${memberOptions(draft.roles[s])}</select></label>`).join("")}
+      <div class="muted small">Незакрытые задачи прежнего ответственного перейдут новому.</div></div>
+    <h2>Языковые каналы</h2><div class="card">
+      <div class="lang-row muted small"><span>Язык</span><span>Название канала / ссылка</span><span></span></div>
+      ${draft.channels.map((c, i) => `<div class="lang-row"><input class="inp" data-ch="${i}" data-k="lang" value="${esc(c.lang)}" placeholder="en" maxlength="5">
+        <input class="inp" data-ch="${i}" data-k="name" value="${esc(c.name || "")}" placeholder="${flag(c.lang)} название или YouTube-ссылка">
+        <button class="icon-btn" data-act="ch-del" data-i="${i}">✕</button></div>`).join("")}
+      <button class="btn ghost sm" data-act="ch-add">+ язык</button>
+      ${isNew ? "" : `<div class="muted small" style="margin-top:6px">Удаление языка удалит его задачи во всех выпусках.</div>`}</div>
+    <button class="btn block" data-act="save-project">Сохранить</button>
+    ${isNew ? "" : `<button class="btn danger block" style="margin-top:8px" data-act="archive-project" data-id="${draft.id}">Архивировать проект</button>`}`;
+  };
+}
+
+function openProject(id) {
+  const p = proj(id);
+  const draft = p
+    ? { ...p, channels: projChannels(id).map((c) => ({ id: c.id, lang: c.lang, name: c.name || c.youtube_url || "" })), roles: {} }
+    : { id: 0, name: "", emoji: "🎬", cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, roles: {}, channels: ["ru", "en", "es", "de", "fr"].map((lang) => ({ lang, name: "" })) };
+  for (const s of STAGES) {
+    const r = S.roles.find((x) => x.project_id === id && x.stage === s);
+    // для нового проекта подставляем роли из первого существующего
+    const fallback = S.roles.find((x) => x.stage === s);
+    draft.roles[s] = r ? r.member_id : !p && fallback ? fallback.member_id : null;
+  }
+  ui.draft = draft;
+  openSheet(projectSheet(draft));
+}
+
+function readProjectForm() {
+  const d = ui.draft;
+  document.querySelectorAll("#sheet [data-pf]").forEach((el) => { d[el.dataset.pf] = el.type === "number" ? Number(el.value) : el.value; });
+  document.querySelectorAll("#sheet [data-role]").forEach((el) => { d.roles[el.dataset.role] = el.value ? Number(el.value) : null; });
+  document.querySelectorAll("#sheet [data-ch]").forEach((el) => { d.channels[Number(el.dataset.ch)][el.dataset.k] = el.value.trim(); });
+}
+
+// ---------- события ----------
+const handlers = {
+  "tab": (el, ev) => { ev.preventDefault(); ui.tab = el.dataset.tab; store("tab", ui.tab); window.scrollTo(0, 0); render(); },
+  "filter": (el) => { ui.project = el.dataset.p; store("project", ui.project); render(); },
+  "toggle-done": () => { ui.showDone = !ui.showDone; render(); },
+  "month": (el) => {
+    const [y, m] = ui.month.split("-").map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + Number(el.dataset.dir), 1));
+    ui.month = d.toISOString().slice(0, 7);
+    render();
+  },
+  "day": (el) => { ui.day = el.dataset.d; haptic("light"); render(); },
+  "open-episode": (el) => openSheet(episodeSheet(Number(el.dataset.id))),
+  "close-sheet": () => closeSheet(),
+  "new-episode": () => openNewEpisode(),
+  "done": (el) => act("tasks.done", { ids: el.dataset.ids.split(",").map(Number), done: true }, "✅ Отмечено"),
+  "toggle": async (el) => {
+    const t = S.tasks.find((x) => x.id === Number(el.dataset.id));
+    if (!t) return;
+    if (t.done_at) {
+      if (await confirmBox("Снять отметку «готово»?")) act("tasks.done", { ids: [t.id], done: false });
+    } else if (!isActive(t)) {
+      haptic("warning");
+      toast("Сначала нужно закончить предыдущий этап");
+    } else act("tasks.done", { ids: [t.id], done: true }, "✅ Отмечено");
+  },
+  "add-link": async (el) => {
+    const url = document.getElementById("link-url").value.trim();
+    if (!url) return toast("Вставь ссылку");
+    await act("link.add", { episode_id: Number(el.dataset.id), url, title: document.getElementById("link-title").value.trim(), stage: document.getElementById("link-stage").value }, "🔗 Добавлено");
+  },
+  "open-link": (el, ev) => { ev.preventDefault(); if (tg && tg.openLink && tg.initData) tg.openLink(el.href); else window.open(el.href, "_blank"); },
+  "del-link": async (el) => { if (await confirmBox("Удалить ссылку?")) act("link.delete", { id: Number(el.dataset.id) }); },
+  "del-episode": async (el) => {
+    if (await confirmBox("Удалить выпуск со всеми задачами? Карточка в группе тоже удалится.")) {
+      const ok = await act("episode.delete", { id: Number(el.dataset.id) }, "Удалено");
+      if (ok) closeSheet();
+    }
+  },
+  "create-episode": async () => {
+    const title = document.getElementById("ne-title").value.trim();
+    if (!title) return toast("Напиши название");
+    const r = await act("episode.create", {
+      project_id: Number(document.getElementById("ne-project").value), title,
+      code: document.getElementById("ne-code").value.trim() || undefined,
+      publish_date: document.getElementById("ne-date").value || undefined,
+    }, "🎬 Выпуск создан, карточка в группе");
+    if (r) openSheet(episodeSheet(r.id));
+  },
+  "edit-project": (el) => openProject(Number(el.dataset.id)),
+  "ch-add": () => { readProjectForm(); ui.draft.channels.push({ lang: "", name: "" }); ui.sheet.render(); },
+  "ch-del": (el) => { readProjectForm(); ui.draft.channels.splice(Number(el.dataset.i), 1); ui.sheet.render(); },
+  "save-project": async () => {
+    readProjectForm();
+    const d = ui.draft;
+    if (!d.name.trim()) return toast("Нужно название");
+    const channels = d.channels.filter((c) => c.lang).map((c) => {
+      const isUrl = /^https?:\/\//.test(c.name || "");
+      return { id: c.id, lang: c.lang, name: isUrl ? null : c.name || null, youtube_url: isUrl ? c.name : null };
+    });
+    const r = await act("project.save", { ...d, channels }, "Сохранено");
+    if (r) closeSheet();
+  },
+  "archive-project": async (el) => {
+    if (await confirmBox("Архивировать проект? Его выпуски пропадут из списков и напоминаний.")) {
+      if (await act("project.archive", { id: Number(el.dataset.id) }, "Проект в архиве")) closeSheet();
+    }
+  },
+  "save-settings": () => act("settings.save", {
+    timezone: document.getElementById("set-tz").value.trim(),
+    morning_hour: Number(document.getElementById("set-morning").value),
+    evening_hour: Number(document.getElementById("set-evening").value),
+  }, "Сохранено"),
+  "rename": async (el) => {
+    const m = mem(Number(el.dataset.id));
+    const name = window.prompt("Имя в боте:", m.name);
+    if (name && name.trim()) act("member.update", { tg_id: m.tg_id, name: name.trim() });
+  },
+};
+
+document.addEventListener("click", (ev) => {
+  const el = ev.target.closest("[data-act]");
+  if (!el || el.tagName === "SELECT") return;
+  const h = handlers[el.dataset.act];
+  if (h) h(el, ev);
+});
+
+document.addEventListener("change", (ev) => {
+  const el = ev.target;
+  if (el.id === "ne-date") el.dataset.touched = "1";
+  if (el.dataset.actChange === "ne-project") {
+    const pid = Number(el.value);
+    const st = ui.newEp;
+    st.project_id = pid;
+    st.title = document.getElementById("ne-title").value;
+    st.codeHint = nextCode(pid);
+    ui.sheet.render();
+    suggestDate(st);
+    return;
+  }
+  if (el.dataset.actChange === "assign") {
+    if (el.value === "разные") return;
+    act("tasks.assign", { ids: el.dataset.ids.split(",").map(Number), assignee_id: el.value ? Number(el.value) : null }, "Назначено");
+    return;
+  }
+  if (el.dataset.actChange === "due") {
+    if (!el.dataset.ids) return;
+    act("tasks.assign", { ids: el.dataset.ids.split(",").map(Number), due_date: el.value || null }, "Срок изменён");
+    return;
+  }
+  if (el.dataset.field && ui.sheet) {
+    const id = Number(document.querySelector("#sheet [data-act='del-episode']").dataset.id);
+    act("episode.update", { id, [el.dataset.field]: el.value }, "Сохранено");
+  }
+});
+
+// ---------- старт ----------
+async function start() {
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    if (tg.initData) document.documentElement.classList.add("tg");
+    if (tg.BackButton) tg.BackButton.onClick(closeSheet);
+  }
+  try {
+    await load();
+  } catch (e) {
+    document.getElementById("view").innerHTML = `<div class="empty">😕 ${esc(e.message)}<br><br><button class="btn" onclick="location.reload()">Повторить</button></div>`;
+    return;
+  }
+  const sp = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || qs.get("startapp") || "";
+  const m = sp.match(/^ep_(\d+)$/);
+  if (m && ep(Number(m[1]))) openSheet(episodeSheet(Number(m[1])));
+}
+
+if (MOCK) {
+  const s = document.createElement("script");
+  s.src = "mock.js";
+  s.onload = start;
+  document.head.appendChild(s);
+} else start();
+</script>
+</body>
+</html>
