@@ -289,11 +289,34 @@ function render() {
   if (ui.sheet) ui.sheet.render();
 }
 
+function setupSteps() {
+  const ps = S.projects;
+  const kindsOk = (p) => KINDS.filter((k) => topicBound(p.id, k.id)).length;
+  const topicsOk = ps.reduce((n, p) => n + kindsOk(p), 0);
+  const noTopics = ps.find((p) => kindsOk(p) < KINDS.length);
+  const noRoles = ps.find((p) => STAGES.some((st) => !(S.roles.find((r) => r.project_id === p.id && r.stage === st) || {}).member_id));
+  const chans = S.channels.filter((c) => ps.some((p) => p.id === c.project_id));
+  const noYt = ps.find((p) => projChannels(p.id).some((c) => !c.youtube_url));
+  return [
+    { ok: S.settings.group_linked, t: "Группа подключена", hint: "Добавь бота в группу админом" },
+    { ok: S.drive && S.drive.enabled, t: "Google Диск подключён", hint: "Нужен ключ Google (файл google-sa.json)" },
+    { ok: ps.length > 0, t: ps.length ? `Проекты: ${ps.length}` : "Создать проекты", btn: ["+ Проект", 0] },
+    { ok: ps.length > 0 && !noTopics, t: `Темы в группе: ${topicsOk} из ${ps.length * KINDS.length}`, btn: noTopics && ["Настроить", noTopics.id] },
+    { ok: S.members.length >= 2, t: `В команде: ${S.members.length} чел.`, hint: "Напарник появится, когда напишет боту /start или любое сообщение в группе" },
+    { ok: ps.length > 0 && !noRoles, t: "Ответственные назначены", btn: noRoles && ["Назначить", noRoles.id] },
+    { ok: chans.length > 0 && !noYt, t: `YouTube-каналы: ${chans.filter((c) => c.youtube_url).length} из ${chans.length}`, btn: noYt && ["Добавить", noYt.id] },
+  ];
+}
+
 function onboarding() {
-  if (S.projects.length) return "";
-  return `<div class="card"><div class="title">👋 Начнём</div>
-    <p class="small">Создай проекты (во вкладке «Настройки» или командой <code>/project Название; ru en es de fr</code> в теме группы), назначь ответственных — и добавляй выпуски.</p>
-    ${S.me.is_admin ? `<button class="btn" data-act="edit-project" data-id="0">+ Создать проект</button>` : ""}</div>`;
+  if (!S.me.is_admin) return "";
+  const steps = setupSteps();
+  if (steps.every((x) => x.ok)) return "";
+  const done = steps.filter((x) => x.ok).length;
+  return `<div class="card"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${steps.length}</span></div>
+    ${steps.map((x) => `<div class="row" style="padding:7px 0;border-top:1px solid var(--sep)"><span>${x.ok ? "✅" : "⬜"}</span>
+      <div class="grow small">${esc(x.t)}${!x.ok && x.hint ? `<div class="muted">${esc(x.hint)}</div>` : ""}</div>
+      ${!x.ok && x.btn ? `<button class="btn sm" data-act="edit-project" data-id="${x.btn[1]}">${esc(x.btn[0])}</button>` : ""}</div>`).join("")}</div>`;
 }
 
 // --- Мои задачи
@@ -444,7 +467,7 @@ function viewCalendar() {
 // --- Настройки
 function viewSettings() {
   const admin = S.me.is_admin;
-  let html = `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
+  let html = onboarding() + `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
       <div class="ava">${esc(m.name.slice(0, 1).toUpperCase())}</div>
       <div class="grow"><div>${esc(m.name)}${m.tg_id === S.me.tg_id ? " <span class='muted'>(ты)</span>" : ""}</div>
       <div class="muted">${m.username ? "@" + esc(m.username) + " · " : ""}${m.is_admin ? "админ" : "участник"}${m.can_dm ? "" : " · ⚠️ не писал боту в личку"}</div></div>
@@ -585,7 +608,13 @@ async function suggestDate(state) {
 function projectSheet(draft) {
   return () => {
     const isNew = !draft.id;
+    const folders = ui.driveFolders;
+    const pick = !isNew ? "" : !(S.drive && S.drive.enabled) ? "" : `<h2>📁 Папка проекта на Диске</h2><div class="card">${
+      folders == null ? `<span class="muted small">Ищу папки…</span>`
+      : folders.length ? `<div class="chips" style="flex-wrap:wrap">${folders.map((f) => `<button class="chip ${draft.drive_folder.includes(f.id) ? "on" : ""}" data-act="pick-folder" data-id="${esc(f.id)}" data-name="${esc(f.name)}">📁 ${esc(f.name)}</button>`).join("")}</div><div class="muted small">Нажми на папку — название и связь с Диском заполнятся сами.</div>`
+      : `<span class="muted small">Новых папок не видно. Поделись папкой проекта с ботом (Читатель): <code style="user-select:all">${esc(S.drive.email || "")}</code></span>`}</div>`;
     return `<div class="sheet-title"><b>${isNew ? "Новый проект" : "Проект"}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+    ${pick}
     <div class="card">
       <div class="row" style="gap:8px"><label class="f" style="width:72px"><span>Иконка</span><input class="inp" data-pf="emoji" value="${esc(draft.emoji)}" maxlength="4"></label>
       <label class="f grow"><span>Название</span><input class="inp" data-pf="name" value="${esc(draft.name)}" placeholder="Скрытая Физика"></label></div>
@@ -595,8 +624,7 @@ function projectSheet(draft) {
       <span class="muted small">За сколько дней до выхода должен быть готов этап:</span>
       <div class="grid4" style="margin-top:4px">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><input class="inp" type="number" min="0" data-pf="${s}_offset" value="${draft[s + "_offset"]}"></label>`).join("")}</div>
     </div>
-    ${isNew ? "" : `<h2>Темы в группе</h2><div class="card small">${KINDS.map((k) => `${k.e} ${k.n}: ${topicBound(draft.id, k.id) ? "✅" : "⚠️ не привязана"}`).join("<br>")}
-      <div class="muted" style="margin-top:6px">Привязка — командой /bind внутри нужной темы.</div></div>`}
+    ${isNew ? "" : topicsSection(draft.id)}
     <h2>Ответственные</h2><div class="card">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><select class="inp" data-role="${s}">${memberOptions(draft.roles[s])}</select></label>`).join("")}
       <div class="muted small">Незакрытые задачи прежнего ответственного перейдут новому.</div></div>
     <h2>Языковые каналы</h2><div class="card">
@@ -631,6 +659,33 @@ function openProject(id) {
   }
   ui.draft = draft;
   openSheet(projectSheet(draft));
+  if (!p && S.drive && S.drive.enabled) {
+    ui.driveFolders = null;
+    api("drive.folders").then((r) => { ui.driveFolders = r.folders || []; if (ui.draft === draft) ui.sheet.render(); })
+      .catch(() => { ui.driveFolders = []; if (ui.draft === draft) ui.sheet.render(); });
+  }
+}
+
+function topicsSection(pid) {
+  const gt = S.group_topics || [];
+  const owner = (thread) => {
+    const t = (S.topics || []).find((x) => Number(x.thread_id) === Number(thread));
+    return t ? `${(proj(t.project_id) || { name: "?" }).name} · ${KINDS.find((k) => k.id === t.kind).n}` : null;
+  };
+  const missing = KINDS.filter((k) => !topicBound(pid, k.id)).length;
+  return `<h2>Темы в группе</h2><div class="card">${KINDS.map((k) => {
+    const cur = (S.topics || []).find((x) => x.project_id === pid && x.kind === k.id);
+    return `<label class="f"><span>${k.e} ${k.n}</span><select class="inp" data-act-change="topic" data-pid="${pid}" data-kind="${k.id}">
+      <option value="">— не привязана</option>
+      ${gt.map((t) => {
+        const o = owner(t.thread_id);
+        const mine = cur && Number(cur.thread_id) === Number(t.thread_id);
+        return `<option value="${t.thread_id}" ${mine ? "selected" : ""}>${esc(t.name)}${o && !mine ? ` (сейчас: ${esc(o)})` : ""}</option>`;
+      }).join("")}
+      <option value="new">➕ Создать новую тему</option></select></label>`;
+  }).join("")}
+    ${missing ? `<button class="btn ghost block" data-act="topics-create" data-id="${pid}">➕ Создать недостающие темы (${missing})</button>` : ""}
+    <div class="muted small" style="margin-top:6px">Нет нужной темы в списке? Напиши в ней любое сообщение — бот её увидит. Темы с понятным названием («… Скрытая Физика (Озвучка)») привязываются сами.</div></div>`;
 }
 
 function readProjectForm() {
@@ -697,8 +752,23 @@ const handlers = {
     const d = ui.draft;
     if (!d.name.trim()) return toast("Нужно название");
     const channels = d.channels.filter((c) => c.lang).map((c) => ({ id: c.id, lang: c.lang, name: c.name || null, youtube_url: c.youtube_url || null }));
-    const r = await act("project.save", { ...d, channels }, "Сохранено");
-    if (r) closeSheet();
+    const r = await act("project.save", { ...d, channels }, d.id ? "Сохранено" : "Проект создан");
+    if (!r) return;
+    if (!d.id && r.id) openProject(r.id); // сразу показать темы и каналы нового проекта
+    else closeSheet();
+  },
+  "pick-folder": (el) => {
+    readProjectForm();
+    const d = ui.draft;
+    d.drive_folder = `https://drive.google.com/drive/folders/${el.dataset.id}`;
+    const nm = el.dataset.name.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+    d.name = nm.charAt(0).toUpperCase() + nm.slice(1);
+    haptic("light");
+    ui.sheet.render();
+  },
+  "topics-create": async (el) => {
+    readProjectForm();
+    await act("topics.create_missing", { project_id: Number(el.dataset.id) }, "Темы созданы в группе");
   },
   "archive-project": async (el) => {
     if (await confirmBox("Архивировать проект? Его выпуски пропадут из списков и напоминаний.")) {
@@ -735,6 +805,13 @@ document.addEventListener("change", (ev) => {
     st.codeHint = nextCode(pid);
     ui.sheet.render();
     suggestDate(st);
+    return;
+  }
+  if (el.dataset.actChange === "topic") {
+    readProjectForm();
+    const v = el.value;
+    act("topics.set", { project_id: Number(el.dataset.pid), kind: el.dataset.kind, thread_id: v === "new" ? "new" : v ? Number(v) : null },
+      v === "new" ? "Тема создана в группе" : v ? "Тема привязана" : "Тема отвязана");
     return;
   }
   if (el.dataset.actChange === "assign") {

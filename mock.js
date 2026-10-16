@@ -18,8 +18,18 @@
       { id: 3, name: "Channel #1", emoji: "🪐", thread_id: null, cadence_days: 4, script_offset: 6, voice_offset: 4, edit_offset: 2, upload_offset: 0, sort: 3 },
     ],
     channels: [], episodes: [], tasks: [], links: [], roles: [],
-    topics: [{ project_id: 1, kind: "script", thread_id: 21 }, { project_id: 1, kind: "voice", thread_id: 22 }, { project_id: 1, kind: "video", thread_id: 23 }],
+    topics: [
+      { project_id: 1, kind: "script", thread_id: 21 }, { project_id: 1, kind: "voice", thread_id: 22 }, { project_id: 1, kind: "video", thread_id: 23 },
+      { project_id: 2, kind: "script", thread_id: 31 }, { project_id: 2, kind: "voice", thread_id: 32 }, { project_id: 2, kind: "video", thread_id: 33 },
+      { project_id: 3, kind: "script", thread_id: 41 },
+    ],
     drive: { enabled: true, email: "yt-bot@yt-bot-123.iam.gserviceaccount.com" },
+    group_topics: [
+      { thread_id: 21, name: "Channel Скрытая Физика ( Сценарий )" }, { thread_id: 22, name: "Channel Скрытая Физика ( Озвучка )" },
+      { thread_id: 23, name: "Channel Скрытая Физика ( Готовое Видео )" }, { thread_id: 31, name: "Channel Тактика Боя ( Сценарий )" },
+      { thread_id: 32, name: "Channel Тактика Боя (Озвучка)" }, { thread_id: 33, name: "Channel Тактика Боя (Готовое видео)" },
+      { thread_id: 41, name: "Сценарий (Channel #1)" }, { thread_id: 42, name: "Озвучка (Channel #1)" },
+    ],
     settings: { timezone: "Europe/Moscow", morning_hour: 9, evening_hour: 20, group_linked: true },
   };
   let cid = 1, eid = 1, tid = 1, lid = 1;
@@ -78,6 +88,22 @@
         for (const s of STAGES) { st.roles = st.roles.filter((r) => !(r.project_id === p.id && r.stage === s)); st.roles.push({ project_id: p.id, stage: s, member_id: b.roles[s] }); }
         return { id: p.id };
       }
+      case "drive.folders": return { folders: [{ id: "f1", name: "Youtube channel #2" }, { id: "f2", name: "Космос_за_5_минут" }] };
+      case "topics.set": {
+        st.topics = st.topics.filter((t) => !(t.project_id === b.project_id && t.kind === b.kind) && t.thread_id !== b.thread_id);
+        let th = b.thread_id;
+        if (th === "new") { th = 100 + st.group_topics.length; st.group_topics.push({ thread_id: th, name: "новая тема " + th }); }
+        if (th) st.topics.push({ project_id: b.project_id, kind: b.kind, thread_id: th });
+        return {};
+      }
+      case "topics.create_missing":
+        for (const k of ["script", "voice", "video"]) {
+          if (st.topics.some((t) => t.project_id === b.project_id && t.kind === k)) continue;
+          const th = 100 + st.group_topics.length;
+          st.group_topics.push({ thread_id: th, name: "новая тема " + th });
+          st.topics.push({ project_id: b.project_id, kind: k, thread_id: th });
+        }
+        return {};
       case "project.archive": st.projects = st.projects.filter((p) => p.id !== b.id); return {};
       case "settings.save": Object.assign(st.settings, { timezone: b.timezone, morning_hour: b.morning_hour, evening_hour: b.evening_hour }); return {};
       case "member.update": Object.assign(st.members.find((m) => m.tg_id === b.tg_id), { name: b.name }); return {};
