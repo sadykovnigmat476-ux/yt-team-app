@@ -221,7 +221,9 @@ const chSort = (t) => (chan(t.channel_id) || { sort: -1 }).sort;
 function blocker(t) {
   const prev = PREV[t.stage];
   if (!prev) return null;
-  return S.tasks.find((x) => x.episode_id === t.episode_id && x.stage === prev && (prev === "script" || x.channel_id === t.channel_id)) || null;
+  // свой язык, если этап шёл по языкам; иначе общая задача на все языки (как на сервере)
+  const same = S.tasks.filter((x) => x.episode_id === t.episode_id && x.stage === prev);
+  return same.find((x) => x.channel_id === t.channel_id) || same.find((x) => x.channel_id == null) || null;
 }
 function isActive(t) {
   if (t.done_at) return false;
@@ -313,10 +315,11 @@ function myGroups() {
 
 function taskGroupCard(g) {
   const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
-  const langs = g.stage === "script" ? "" : `<div class="chips" style="margin-top:8px">${g.info.ts.map(langChip).join("")}</div>`;
+  const single = g.info.total === 1 && !g.info.ts[0].channel_id; // этап сразу на все языки
+  const langs = single ? "" : `<div class="chips" style="margin-top:8px">${g.info.ts.map(langChip).join("")}</div>`;
   const all = g.activeMine.length > 1
     ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine.map((t) => t.id).join(",")}">Все ${g.activeMine.length} готовы</button>`
-    : g.activeMine.length === 1 && g.stage === "script"
+    : g.activeMine.length === 1 && single
       ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine[0].id}">Готово</button>` : "";
   const waitTxt = g.waiting ? `<div class="muted" style="margin-top:6px">⏳ ждёт: ${META[PREV[g.stage]].n.toLowerCase()}</div>` : "";
   return `<div class="card">
@@ -518,8 +521,8 @@ function episodeSheet(id) {
       const assignees = [...new Set(i.ts.map((t) => t.assignee_id))];
       const ids = i.ts.map((t) => t.id).join(",");
       const openActive = i.ts.filter(isActive);
-      const body = st === "script"
-        ? `<button class="chip lang ${i.done ? "done" : "active"}" data-act="toggle" data-id="${i.ts[0].id}">${i.done ? "✓ Готов" : "Отметить готовым"}</button>`
+      const body = i.total === 1 && !i.ts[0].channel_id
+        ? `<button class="chip lang ${i.done ? "done" : openActive.length ? "active" : "blocked"}" data-act="toggle" data-id="${i.ts[0].id}">${i.done ? "✓ Готово" : openActive.length ? "Отметить готовым" : "⏳ ждёт предыдущий этап"}</button>`
         : `<div class="chips">${i.ts.map(langChip).join("")}</div>${openActive.length > 1 ? `<button class="btn sm" style="margin-top:6px" data-act="done" data-ids="${openActive.map((t) => t.id).join(",")}">Все ${openActive.length} готовы</button>` : ""}`;
       html += `<div class="stage-box"><div class="head"><b class="grow">${META[st].e} ${META[st].n}</b>
         <select data-act-change="assign" data-ids="${ids}">${assignees.length > 1 ? `<option selected>разные</option>` : ""}${memberOptions(assignees.length === 1 ? assignees[0] : undefined)}</select>
