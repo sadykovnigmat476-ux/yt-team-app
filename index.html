@@ -341,17 +341,22 @@ function setupSteps() {
     { ok: ps.length > 0 && !noTopics, t: `Темы в группе: ${topicsOk} из ${ps.length * KINDS.length}`, btn: noTopics && ["Настроить", noTopics.id] },
     { ok: S.members.length >= 2, t: `В команде: ${S.members.length} чел.`, hint: "Напарник появится, когда напишет боту /start или любое сообщение в группе" },
     { ok: ps.length > 0 && !noRoles, t: "Ответственные назначены", btn: noRoles && ["Назначить", noRoles.id] },
-    { ok: chans.length > 0 && !noYt, t: `YouTube-каналы: ${chans.filter((c) => c.youtube_url).length} из ${chans.length}`, btn: noYt && ["Добавить", noYt.id] },
+    { ok: chans.length > 0 && !noYt, optional: true, t: `YouTube-каналы: ${chans.filter((c) => c.youtube_url).length} из ${chans.length}`, hint: "Необязательно: тогда бот сам отметит выкладку, увидев ролик на канале", btn: noYt && ["Добавить", noYt.id] },
   ];
 }
 
-function onboarding() {
+/**
+ * Чек-лист настройки. На рабочих вкладках — пока не готово обязательное;
+ * необязательное (ссылки на YouTube) напоминаем только в «Настройках».
+ */
+function onboarding(where) {
   if (!S.me.is_admin) return "";
   const steps = setupSteps();
-  if (steps.every((x) => x.ok)) return "";
-  const done = steps.filter((x) => x.ok).length;
-  return `<div class="card onb"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${steps.length}</span></div>
-    ${steps.map((x) => `<div class="row" style="padding:7px 0;border-top:1px solid var(--sep)"><span>${x.ok ? "✅" : "⬜"}</span>
+  const required = steps.filter((x) => !x.optional);
+  if (where === "settings" ? steps.every((x) => x.ok) : required.every((x) => x.ok)) return "";
+  const done = required.filter((x) => x.ok).length;
+  return `<div class="card onb"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${required.length}</span></div>
+    ${steps.map((x) => `<div class="row" style="padding:7px 0;border-top:1px solid var(--sep)"><span>${x.ok ? "✅" : x.optional ? "💡" : "⬜"}</span>
       <div class="grow small">${esc(x.t)}${!x.ok && x.hint ? `<div class="muted">${esc(x.hint)}</div>` : ""}</div>
       ${!x.ok && x.btn ? `<button class="btn sm" data-act="edit-project" data-id="${x.btn[1]}">${esc(x.btn[0])}</button>` : ""}</div>`).join("")}</div>`;
 }
@@ -506,7 +511,7 @@ function viewCalendar() {
 // --- Настройки
 function viewSettings() {
   const admin = S.me.is_admin;
-  let html = `<div class="settings">` + onboarding() + `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
+  let html = `<div class="settings">` + onboarding("settings") + `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
       <div class="ava">${esc(m.name.slice(0, 1).toUpperCase())}</div>
       <div class="grow"><div>${esc(m.name)}${m.tg_id === S.me.tg_id ? " <span class='muted'>(ты)</span>" : ""}</div>
       <div class="muted">${m.username ? "@" + esc(m.username) + " · " : ""}${m.is_admin ? "админ" : "участник"}${m.can_dm ? "" : " · ⚠️ не писал боту в личку"}</div></div>
