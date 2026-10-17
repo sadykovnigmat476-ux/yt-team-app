@@ -178,6 +178,10 @@
     .sheet { left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 40px)); max-height: calc(var(--vh) - 48px); border-radius: 18px; padding: 12px 16px 20px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
     .sheet .grip { display: none; }
   }
+  /* Мышь: строку фильтров вбок не прокрутить — переносим на новую строку */
+  @media (hover: hover) and (pointer: fine) {
+    .chips { flex-wrap: wrap; overflow: visible; }
+  }
   @media (min-width: 760px) and (pointer: fine) {
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
@@ -567,7 +571,7 @@ function viewStats() {
   const key = statsKey();
   // новые цифры грузятся поверх старых (приглушённых), без мигания пустым экраном
   if ((!ui.stats || ui.stats.key !== key) && !(ui.statsError && ui.statsError.key === key)) loadStats();
-  let html = `<div class="chips">${[7, 30, 90].map((d) => `<button class="chip ${ui.statsDays === d ? "on" : ""}" data-act="stats-days" data-d="${d}">${d} дней</button>`).join("")}</div>` + projectChips();
+  let html = `<div class="chips">${[7, 30, 90].map((d) => `<button class="chip ${ui.statsDays === d ? "on" : ""}" data-act="stats-days" data-d="${d}">${d} дней</button>`).join("")}${fullscreenChip()}</div>` + projectChips();
   if (ui.statsError && ui.statsError.key === key && !ui.stats) return html + `<div class="empty">😕 ${esc(ui.statsError.msg)}</div>`;
   if (!ui.stats) return html + `<div class="loading">Считаю…</div>`;
   const d = ui.stats.data;
@@ -667,6 +671,14 @@ function statsHealth(d) {
     <div class="muted small" style="margin-top:6px">Если что-то ломается, бот сам пишет админам в личку.</div></div>`;
 }
 
+// --- Окно на весь экран (Telegram Desktop и macOS открывают Mini App узким окном)
+const DESKTOP = ["tdesktop", "macos", "web", "weba", "webk", "unigram"];
+const canFullscreen = () => !!(tg && tg.initData && tg.isVersionAtLeast && tg.isVersionAtLeast("8.0") && tg.requestFullscreen && DESKTOP.includes(tg.platform));
+function fullscreenChip() {
+  if (!canFullscreen()) return "";
+  return `<button class="chip" data-act="fullscreen" style="margin-left:auto">${tg.isFullscreen ? "↙ Обычное окно" : "⛶ На весь экран"}</button>`;
+}
+
 // --- Настройки
 function viewSettings() {
   const admin = S.me.is_admin;
@@ -698,6 +710,10 @@ function viewSettings() {
     : "⚠️ Не подключён: нужен ключ сервисного аккаунта Google."}</div>`;
 
   const st = S.settings;
+  if (canFullscreen()) {
+    html += `<h2>Окно</h2><div class="card row"><div class="grow small">На компьютере Telegram открывает приложение узким окном. На весь экран — статистика и календарь в две колонки.${store("fullscreen") === "1" ? "<div class='muted'>Сейчас открывается сразу на весь экран.</div>" : ""}</div>
+      <button class="btn sm" data-act="fullscreen">${tg.isFullscreen ? "Обычное окно" : "На весь экран"}</button></div>`;
+  }
   html += `<h2>Напоминания</h2><div class="card">
     <label class="f"><span>Часовой пояс команды</span><input class="inp" id="set-tz" list="tz-list" value="${esc(st.timezone)}" ${admin ? "" : "disabled"}></label>
     <datalist id="tz-list">${["Europe/Moscow", "Asia/Tashkent", "Asia/Almaty", "Asia/Yekaterinburg", "Europe/Samara", "Europe/Kyiv", "Asia/Bishkek", "Asia/Dushanbe", "Asia/Baku", "Europe/Istanbul", "Europe/Berlin", Intl.DateTimeFormat().resolvedOptions().timeZone].filter((v, i, a) => a.indexOf(v) === i).map((z) => `<option value="${z}">`).join("")}</datalist>
@@ -917,6 +933,13 @@ const handlers = {
     window.scrollTo(0, 0);
     render();
   },
+  // выбор запоминаем: в следующий раз на компьютере откроется так же
+  "fullscreen": () => {
+    try {
+      if (tg.isFullscreen) { store("fullscreen", "0"); tg.exitFullscreen(); }
+      else { store("fullscreen", "1"); tg.requestFullscreen(); }
+    } catch (e) { toast("Telegram не дал развернуть окно — обнови Telegram Desktop"); }
+  },
   "stats-days": (el) => { ui.statsDays = Number(el.dataset.d); store("statsDays", ui.statsDays); render(); },
   "filter": (el) => { ui.project = el.dataset.p; store("project", ui.project); render(); },
   "toggle-done": () => { ui.showDone = !ui.showDone; render(); },
@@ -1084,6 +1107,11 @@ async function start() {
       // шапка и низ окна Telegram — в цвет фона приложения, без белых полос
       if (since("6.1")) { tg.setHeaderColor("secondary_bg_color"); tg.setBackgroundColor("secondary_bg_color"); }
       if (since("7.10")) tg.setBottomBarColor("secondary_bg_color");
+      if (canFullscreen()) {
+        tg.onEvent("fullscreenChanged", () => { if (S) render(); });
+        tg.onEvent("fullscreenFailed", (e) => toast(e && e.error === "UNSUPPORTED" ? "Этот Telegram не умеет полноэкранный режим" : "Не получилось развернуть окно"));
+        if (store("fullscreen") === "1" && !tg.isFullscreen) tg.requestFullscreen();
+      }
     } catch (_) {}
   }
   try {
