@@ -88,6 +88,47 @@
         for (const s of STAGES) { st.roles = st.roles.filter((r) => !(r.project_id === p.id && r.stage === s)); st.roles.push({ project_id: p.id, stage: s, member_id: b.roles[s] }); }
         return { id: p.id };
       }
+      case "stats": {
+        const k = b.days / 30;
+        const pids = b.project_id ? [b.project_id] : st.projects.map((p) => p.id);
+        const base = { ru: 12000, en: 8100, de: 900, pl: 300, es: 4000 };
+        const channels = st.channels.filter((c) => pids.includes(c.project_id)).map((c) => ({
+          channel_id: c.id, project_id: c.project_id, lang: c.lang,
+          subscribers: Math.round(base[c.lang] * 3 / c.project_id), totalViews: base[c.lang] * 40,
+          // у третьего проекта истории ещё нет — видна медиана ролика вместо прироста
+          subsDelta: c.project_id === 3 ? null : Math.round(base[c.lang] / 100 * k), viewsDelta: c.project_id === 3 ? null : Math.round(base[c.lang] * k / c.project_id),
+          deltaDays: c.project_id === 3 ? 0 : Math.min(b.days, 21), videosInPeriod: Math.max(1, Math.round(4 * k)),
+          median: Math.round(base[c.lang] / 4), medianKind: c.project_id === 1 ? "d7" : "total",
+        }));
+        const ep = (id, code, title, pid, d, mult) => ({
+          episode_id: id, project_id: pid, code, title, published: add(today, -d) + "T10:00:00Z",
+          langs: langs.map((l, i) => ({ lang: l, video_id: "dQw4w9WgXcQ", views: Math.round(base[l] * mult), d7: d >= 7 ? Math.round(base[l] * mult * 0.7) : null })),
+          total: 0,
+        });
+        const episodes = [ep(4, "S04", "Ньютон и яблоко: что было на самом деле", 1, 2, 0.4), ep(90, "S03", "Почему небо синее, а закат красный", 1, 9, 1.1), ep(91, "11", "Every Weird Fractal", 3, 15, 0.8)]
+          .filter((e) => pids.includes(e.project_id)).map((e) => ({ ...e, total: e.langs.reduce((n, l) => n + l.views, 0) }));
+        const n = (x) => Math.max(0, Math.round(x * k));
+        return {
+          today, from: add(today, -(b.days - 1)), to: today, days: b.days,
+          team: {
+            released: n(3), uploads: n(15), overdueNow: 2, cycleDays: 6.5,
+            stages: [
+              { stage: "script", closed: n(4), onTime: n(4), avgLate: null },
+              { stage: "voice", closed: n(4), onTime: n(3), avgLate: 1.5 },
+              { stage: "edit", closed: n(3), onTime: n(2), avgLate: 2 },
+              { stage: "upload", closed: n(3), onTime: n(3), avgLate: null },
+            ],
+            phases: [{ stage: "voice", days: 0.8 }, { stage: "edit", days: 3.1 }, { stage: "upload", days: 2.6 }],
+            members: [{ id: 1, name: "Нигмат", closed: n(7), late: 1, overdueNow: 0 }, { id: 2, name: "Павел", closed: n(7), late: 1, overdueNow: 2 }],
+          },
+          channels, episodes,
+          youtube: { enabled: true, last_day: today, videos: 412 },
+          health: {
+            drive: { fails: 0 }, stats: { fails: 0 }, morning: { fails: 0 },
+            youtube: { fails: 4, error: "pl: лента 404", alerted: true },
+          },
+        };
+      }
       case "drive.folders": return { folders: [{ id: "f1", name: "Youtube channel #2" }, { id: "f2", name: "Космос_за_5_минут" }] };
       case "topics.set": {
         st.topics = st.topics.filter((t) => !(t.project_id === b.project_id && t.kind === b.kind) && t.thread_id !== b.thread_id);
