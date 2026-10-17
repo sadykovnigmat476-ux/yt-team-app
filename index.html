@@ -142,10 +142,11 @@
   .tile .l { font-size: 12px; color: var(--hint); }
   .tile.bad .v { color: var(--danger); }
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .bar-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 64px; gap: 8px; align-items: center; padding: 7px 0 2px; }
+  .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; padding: 8px 0 3px; }
+  .bar-row .bar { grid-column: 1 / -1; }
   .bar { height: 10px; border-radius: 4px; background: var(--accent-bg); overflow: hidden; }
   .bar b { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
-  .bar-sub { padding: 0 0 7px 66px; border-bottom: 1px solid var(--sep); }
+  .bar-sub { padding: 0 0 8px; border-bottom: 1px solid var(--sep); }
   .bar-sub:last-child { border-bottom: 0; }
   .st-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--sep); }
   .st-row:first-child { border-top: 0; }
@@ -542,6 +543,13 @@ const fmtNum = (n) => {
   return a < 1e6 ? (r(n / 1000) + "k").replace(".0k", "k") : (r(n / 1e6) + "M").replace(".0M", "M");
 };
 const signed = (n) => (n == null ? "—" : (n > 0 ? "+" : "") + fmtNum(n));
+/** Подпись канала: своё имя, если задано, иначе «Аксиома RU» — проект и язык. */
+function chName(channelId, lang) {
+  const c = chan(channelId);
+  if (c && c.name) return c.name;
+  const p = c && proj(c.project_id);
+  return `${p ? p.name : ""} ${String(lang || (c && c.lang) || "").toUpperCase()}`.trim();
+}
 const statsKey = () => `${ui.statsDays}:${ui.project}`;
 
 function loadStats() {
@@ -622,9 +630,10 @@ function statsLangs(d) {
         const sub = [`👥 ${fmtNum(c.subscribers)}${c.subsDelta ? ` (${signed(c.subsDelta)})` : ""}`,
           c.median != null && hasDelta ? `<span title="${c.medianKind === "d7" ? "медиана просмотров на 7-й день" : "медиана просмотров роликов старше недели"}">ролик ≈ ${fmtNum(c.median)}</span>` : "",
           c.videosInPeriod ? `новых: ${c.videosInPeriod}` : ""].filter(Boolean).join(" · ");
-        return `<div class="bar-row" title="${esc(c.lang.toUpperCase())}: ${txt}">
-          <span>${flag(c.lang)} ${esc(c.lang.toUpperCase())}</span><div class="bar">${v == null ? "" : `<b style="width:${w}%"></b>`}</div>
-          <span class="num" style="text-align:right">${txt}</span></div>
+        const name = chName(c.channel_id, c.lang);
+        return `<div class="bar-row" title="${esc(name)}: ${txt}">
+          <span class="ellipsis">${flag(c.lang)} ${esc(name)}</span><span class="num">${txt}</span>
+          <div class="bar">${v == null ? "" : `<b style="width:${w}%"></b>`}</div></div>
           <div class="bar-sub muted small">${sub}</div>`;
       }).join("")}${legend}</div>`;
   }
