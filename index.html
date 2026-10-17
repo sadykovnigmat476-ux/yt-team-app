@@ -135,6 +135,26 @@
   .clickable { cursor: pointer; }
   .list > .card:last-child { margin-bottom: 8px; }
 
+  /* Статистика: плитки с цифрами и полосы по языкам (одна серия — один цвет, подложка — светлее того же цвета) */
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+  .tile { background: var(--card); border-radius: var(--radius); padding: 10px 12px; min-width: 0; }
+  .tile .v { font-size: 24px; font-weight: 600; line-height: 1.2; }
+  .tile .l { font-size: 12px; color: var(--hint); }
+  .tile.bad .v { color: var(--danger); }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 64px; gap: 8px; align-items: center; padding: 7px 0 2px; }
+  .bar { height: 10px; border-radius: 4px; background: var(--accent-bg); overflow: hidden; }
+  .bar b { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .bar-sub { padding: 0 0 7px 66px; border-bottom: 1px solid var(--sep); }
+  .bar-sub:last-child { border-bottom: 0; }
+  .st-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 0; border-top: 1px solid var(--sep); }
+  .st-row:first-child { border-top: 0; }
+  .st-row .bar { grid-column: 1 / -1; height: 6px; }
+  .ep-views { padding: 8px 0; border-top: 1px solid var(--sep); }
+  .ep-views:first-child { border-top: 0; }
+  .ep-views .chips { flex-wrap: wrap; padding-bottom: 0; margin-top: 6px; }
+  .stale { opacity: .5; transition: opacity .15s; }
+
   /* Телефоны и планшеты с пальцем: поля от 16px, иначе iOS приближает страницу при вводе; кнопки крупнее */
   @media (pointer: coarse) {
     .inp, .stage-box select, .stage-box input[type=date] { font-size: 16px; }
@@ -152,6 +172,8 @@
     .cal-wrap > .side > h2:first-child { margin-top: 0; }
     .day { min-height: 74px; }
     .settings { max-width: 760px; margin: 0 auto; }
+    .tiles { grid-template-columns: repeat(4, 1fr); }
+    .stats-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-items: start; }
     .sheet { left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 40px)); max-height: calc(var(--vh) - 48px); border-radius: 18px; padding: 12px 16px 20px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
     .sheet .grip { display: none; }
   }
@@ -190,11 +212,15 @@ const TABS = [
   { id: "my", e: "✅", n: "Мои" },
   { id: "episodes", e: "🎬", n: "Выпуски" },
   { id: "calendar", e: "🗓", n: "Календарь" },
+  { id: "stats", e: "📊", n: "Статистика" },
   { id: "settings", e: "⚙️", n: "Настройки" },
 ];
 
 let S = null;
-const ui = { tab: store("tab") || "my", project: store("project") || "all", showDone: false, month: null, day: null, sheet: null };
+const ui = {
+  tab: store("tab") || "my", project: store("project") || "all", showDone: false, month: null, day: null, sheet: null,
+  statsDays: Number(store("statsDays")) || 30, stats: null, statsLoading: null, statsError: null,
+};
 
 function store(k, v) {
   try {
@@ -322,7 +348,7 @@ function render() {
   if (S.projects.length) tabs.splice(2, 0, `<button class="add" data-act="new-episode" aria-label="Новый выпуск"><span>+</span>Выпуск</button>`);
   document.getElementById("tabs").innerHTML = tabs.join("");
   const v = document.getElementById("view");
-  v.innerHTML = { my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, settings: viewSettings }[ui.tab]();
+  v.innerHTML = ({ my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, stats: viewStats, settings: viewSettings }[ui.tab] || viewMy)();
   if (ui.sheet) ui.sheet.render();
 }
 
@@ -506,6 +532,126 @@ function viewCalendar() {
     html += `<div class="card clickable row" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>${META[g.stage].e} ${META[g.stage].n}</b> · ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">${esc(who)} · «${esc(e.title)}»</div></div><span class="badge ${g.open === 0 ? "ok" : d < S.today ? "late" : ""}">${g.open === 0 ? "✓" : g.total > 1 ? `${g.total - g.open}/${g.total}` : "срок"}</span></div>`;
   }
   return html + `</div></div>`;
+}
+
+// --- Статистика
+const fmtNum = (n) => {
+  if (n == null) return "—";
+  const a = Math.abs(n), r = (x) => Math.round(x * 10) / 10;
+  if (a < 1000) return String(Math.round(n));
+  return a < 1e6 ? (r(n / 1000) + "k").replace(".0k", "k") : (r(n / 1e6) + "M").replace(".0M", "M");
+};
+const signed = (n) => (n == null ? "—" : (n > 0 ? "+" : "") + fmtNum(n));
+const statsKey = () => `${ui.statsDays}:${ui.project}`;
+
+function loadStats() {
+  const key = statsKey();
+  if (ui.statsLoading === key) return;
+  ui.statsLoading = key;
+  api("stats", { days: ui.statsDays, project_id: ui.project === "all" ? null : Number(ui.project) })
+    // ответ на старый фильтр, пришедший после смены фильтра, не затирает свежий
+    .then((data) => { if (!ui.stats || key === statsKey()) { ui.stats = { key, data }; ui.statsError = null; } })
+    .catch((e) => { ui.statsError = { key, msg: e.message }; })
+    .finally(() => { if (ui.statsLoading === key) ui.statsLoading = null; if (ui.tab === "stats") render(); });
+}
+
+function viewStats() {
+  const key = statsKey();
+  // новые цифры грузятся поверх старых (приглушённых), без мигания пустым экраном
+  if ((!ui.stats || ui.stats.key !== key) && !(ui.statsError && ui.statsError.key === key)) loadStats();
+  let html = `<div class="chips">${[7, 30, 90].map((d) => `<button class="chip ${ui.statsDays === d ? "on" : ""}" data-act="stats-days" data-d="${d}">${d} дней</button>`).join("")}</div>` + projectChips();
+  if (ui.statsError && ui.statsError.key === key && !ui.stats) return html + `<div class="empty">😕 ${esc(ui.statsError.msg)}</div>`;
+  if (!ui.stats) return html + `<div class="loading">Считаю…</div>`;
+  const d = ui.stats.data;
+  html += `<div class="${ui.stats.key !== key ? "stale" : ""}">`;
+  html += `<div class="muted" style="margin:0 4px 8px">${fmt(d.from)} – ${fmt(d.to)}</div>`;
+  html += `<div class="stats-cols"><div>${statsTeam(d.team)}</div><div>${statsLangs(d)}${statsEpisodes(d)}</div></div>`;
+  html += statsHealth(d);
+  return html + `</div>`;
+}
+
+function statsTeam(t) {
+  const closed = t.stages.reduce((n, x) => n + x.closed, 0);
+  const onTime = t.stages.reduce((n, x) => n + x.onTime, 0);
+  const tile = (v, l, cls = "") => `<div class="tile ${cls}"><div class="v">${v}</div><div class="l">${l}</div></div>`;
+  let html = `<h2>Команда</h2><div class="tiles">
+    ${tile(t.released, "выпусков вышло")}
+    ${tile(t.uploads, "выкладок на каналы")}
+    ${tile(closed ? Math.round(onTime / closed * 100) + "%" : "—", closed ? `этапов в срок (${onTime} из ${closed})` : "этапов в срок")}
+    ${tile(t.overdueNow ? "⚠️ " + t.overdueNow : "0", "просрочено сейчас", t.overdueNow ? "bad" : "")}</div>`;
+  const phase = (st) => (t.phases.find((p) => p.stage === st) || {}).days;
+  html += `<div class="card">${t.stages.map((x) => {
+    const pct = x.closed ? Math.round(x.onTime / x.closed * 100) : 0;
+    const dur = phase(x.stage);
+    const meta = [x.closed ? `${x.onTime} из ${x.closed} в срок` : "за период не было", x.avgLate ? `опоздание ≈ ${x.avgLate} дн.` : "", dur != null ? `длится ≈ ${dur} дн.` : ""].filter(Boolean).join(" · ");
+    return `<div class="st-row"><b>${META[x.stage].e} ${META[x.stage].n}</b><span class="num">${x.closed ? pct + "%" : ""}</span>
+      <div class="muted" style="grid-column:1/-1">${meta}</div>${x.closed ? `<div class="bar" title="${pct}% в срок"><b style="width:${pct}%"></b></div>` : ""}</div>`;
+  }).join("")}
+    ${t.cycleDays != null ? `<div class="small" style="margin-top:8px">⏱ От готового сценария до выхода — в среднем <b>${t.cycleDays} дн.</b></div>` : ""}</div>`;
+  if (t.members.length) {
+    html += `<div class="card">${t.members.map((m) => `<div class="member"><div class="ava">${esc(m.name.slice(0, 1).toUpperCase())}</div>
+      <div class="grow"><div>${esc(m.name)}</div><div class="muted">${m.closed ? `${m.closed} этап(ов) · ${m.late ? `${m.late} с опозданием` : "все в срок"}` : "за период ничего не закрыто"}</div></div>
+      ${m.overdueNow ? `<span class="badge late">⚠️ ${m.overdueNow} просрочено</span>` : ""}</div>`).join("")}</div>`;
+  }
+  return html;
+}
+
+function statsLangs(d) {
+  let html = `<h2>Языки</h2>`;
+  if (!d.youtube.enabled) {
+    return html + `<div class="card small">📈 Просмотры по языкам появятся, когда подключим ключ YouTube Data API: Google Cloud → включить <b>YouTube Data API v3</b> → создать API key → <code>YOUTUBE_API_KEY</code> в .env → деплой.</div>`;
+  }
+  if (!d.youtube.last_day) return html + `<div class="card muted small">Первый сбор цифр — завтра в 6 утра. Каналы со ссылкой на YouTube попадут в статистику сами.</div>`;
+  const projects = S.projects.filter((p) => d.channels.some((c) => c.project_id === p.id && (c.subscribers != null || c.median != null)));
+  if (!projects.length) return html + `<div class="card muted small">У каналов нет ссылок на YouTube — добавь их в настройках проекта.</div>`;
+  for (const p of projects) {
+    const cs = d.channels.filter((c) => c.project_id === p.id).sort((a, b) => ((chan(a.channel_id) || {}).sort ?? 0) - ((chan(b.channel_id) || {}).sort ?? 0));
+    const hasDelta = cs.some((c) => c.viewsDelta != null);
+    const val = (c) => (hasDelta ? c.viewsDelta : c.median);
+    const max = Math.max(1, ...cs.map((c) => Math.max(0, val(c) || 0)));
+    const span = Math.max(...cs.map((c) => c.deltaDays || 0));
+    const caption = hasDelta
+      ? `Просмотры за ${span < d.days ? `${span} дн. — история копится` : `${d.days} дн.`}`
+      : "Просмотры типичного ролика (прирост за период появится, когда накопится история)";
+    const legend = hasDelta ? `<div class="muted small" style="margin-top:6px">👥 подписчики · ролик ≈ — типичные просмотры ролика${cs.some((c) => c.medianKind === "d7") ? " за первые 7 дней" : ""} · новых — роликов за период</div>` : "";
+    html += `<div class="card"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted small" style="margin-bottom:2px">${caption}</div>
+      ${cs.map((c) => {
+        const v = val(c);
+        const w = v == null ? 0 : Math.max(0, v) / max * 100;
+        const txt = v == null ? "—" : hasDelta ? signed(v) : fmtNum(v);
+        const sub = [`👥 ${fmtNum(c.subscribers)}${c.subsDelta ? ` (${signed(c.subsDelta)})` : ""}`,
+          c.median != null && hasDelta ? `<span title="${c.medianKind === "d7" ? "медиана просмотров на 7-й день" : "медиана просмотров роликов старше недели"}">ролик ≈ ${fmtNum(c.median)}</span>` : "",
+          c.videosInPeriod ? `новых: ${c.videosInPeriod}` : ""].filter(Boolean).join(" · ");
+        return `<div class="bar-row" title="${esc(c.lang.toUpperCase())}: ${txt}">
+          <span>${flag(c.lang)} ${esc(c.lang.toUpperCase())}</span><div class="bar">${v == null ? "" : `<b style="width:${w}%"></b>`}</div>
+          <span class="num" style="text-align:right">${txt}</span></div>
+          <div class="bar-sub muted small">${sub}</div>`;
+      }).join("")}${legend}</div>`;
+  }
+  return html;
+}
+
+function statsEpisodes(d) {
+  if (!d.episodes.length) return "";
+  return `<h2>Выпуски на всех языках</h2><div class="card">${d.episodes.map((e) => {
+    const p = proj(e.project_id) || { emoji: "" };
+    return `<div class="ep-views"><div class="row"><div class="grow ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div><span class="num"><b>${fmtNum(e.total)}</b></span></div>
+      <div class="muted small">${esc(p.emoji)} вышел ${e.published ? fmt(e.published.slice(0, 10)) : "—"}</div>
+      <div class="chips">${e.langs.map((l) => `<a class="chip" href="https://youtu.be/${esc(l.video_id)}" data-act="open-link" title="${l.d7 != null ? `за 7 дней: ${fmtNum(l.d7)}` : ""}">${flag(l.lang)} <span class="num">${fmtNum(l.views)}</span></a>`).join("")}</div></div>`;
+  }).join("")}</div>`;
+}
+
+const HEALTH = { drive: "Google Диск", youtube: "Отметка выкладки (YouTube)", stats: "Статистика YouTube", morning: "Утренняя рассылка", evening: "Вечернее напоминание", weekly: "План недели" };
+function statsHealth(d) {
+  if (!d.health) return "";
+  const rows = Object.keys(HEALTH).filter((k) => d.health[k]).map((k) => {
+    const h = d.health[k];
+    return `<div class="row" style="padding:6px 0;border-top:1px solid var(--sep);align-items:flex-start"><span>${h.fails ? "🔴" : "✅"}</span>
+      <div class="grow small">${HEALTH[k]}${h.fails ? `<div class="muted" style="word-break:break-word">${esc(h.error || "")} · сбоев подряд: ${h.fails}</div>` : ""}</div></div>`;
+  }).join("");
+  const last = d.youtube.enabled ? `<div class="muted small" style="margin-top:6px">Цифры YouTube собраны: ${d.youtube.last_day ? fmt(d.youtube.last_day) : "ещё ни разу"} · роликов: ${d.youtube.videos}</div>` : "";
+  return `<h2>Состояние бота</h2><div class="card">${rows || `<div class="muted small">Проверок ещё не было.</div>`}${last}
+    <div class="muted small" style="margin-top:6px">Если что-то ломается, бот сам пишет админам в личку.</div></div>`;
 }
 
 // --- Настройки
@@ -749,7 +895,16 @@ function readProjectForm() {
 
 // ---------- события ----------
 const handlers = {
-  "tab": (el, ev) => { ev.preventDefault(); ui.tab = el.dataset.tab; store("tab", ui.tab); window.scrollTo(0, 0); render(); },
+  "tab": (el, ev) => {
+    ev.preventDefault();
+    ui.tab = el.dataset.tab;
+    store("tab", ui.tab);
+    // при каждом заходе — свежие цифры (пока грузятся, видны прежние)
+    if (ui.tab === "stats" && ui.stats) { ui.stats.key = ""; ui.statsError = null; }
+    window.scrollTo(0, 0);
+    render();
+  },
+  "stats-days": (el) => { ui.statsDays = Number(el.dataset.d); store("statsDays", ui.statsDays); render(); },
   "filter": (el) => { ui.project = el.dataset.p; store("project", ui.project); render(); },
   "toggle-done": () => { ui.showDone = !ui.showDone; render(); },
   "month": (el) => {
