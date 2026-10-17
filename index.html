@@ -345,12 +345,13 @@ function taskGroupCard(g) {
     : g.activeMine.length === 1 && single
       ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine[0].id}">Готово</button>` : "";
   const waitTxt = g.waiting ? `<div class="muted" style="margin-top:6px">⏳ ждёт: ${META[PREV[g.stage]].n.toLowerCase()}</div>` : "";
+  const folder = e.drive_folder_id ? `<a class="btn ghost sm" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Папка</a>` : "";
   return `<div class="card">
     <div class="row"><div class="grow clickable" data-act="open-episode" data-id="${e.id}">
       <div class="ellipsis"><b>${m.e} ${m.n}</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}</div>
       <div class="muted ellipsis">«${esc(e.title)}» · выход ${fmt(e.publish_date)}</div></div>
       ${g.waiting ? "" : dueBadge(g.due)}</div>
-    ${langs}${waitTxt}${all ? `<div class="row" style="margin-top:8px;justify-content:flex-end">${all}</div>` : ""}</div>`;
+    ${langs}${waitTxt}${all || folder ? `<div class="row" style="margin-top:8px;justify-content:flex-end">${folder}${all}</div>` : ""}</div>`;
 }
 
 function langChip(t) {
@@ -532,6 +533,8 @@ function episodeSheet(id) {
     const p = proj(e.project_id);
     const links = S.links.filter((l) => l.episode_id === id);
     let html = `<div class="sheet-title"><b>${esc(p.emoji)} ${esc(p.name)} · ${esc(e.code)}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+      ${e.drive_folder_id ? `<a class="btn block" style="display:block;text-align:center;margin-bottom:8px" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Открыть папку на Диске</a>
+        <div class="muted small" style="margin:-2px 4px 10px">Внутри: 1_Сценарий · 2_Озвучка · 3_Готовое видео. Кладите файлы — этапы отметятся сами.</div>` : ""}
       <div class="card">
         <label class="f"><span>Название</span><input class="inp" data-field="title" value="${esc(e.title)}"></label>
         <div class="grid2"><label class="f"><span>Код</span><input class="inp" data-field="code" value="${esc(e.code)}"></label>
@@ -572,11 +575,13 @@ function newEpisodeSheet(state) {
       <label class="f"><span>Название</span><input class="inp" id="ne-title" placeholder="Как Эратосфен измерил Землю" value="${esc(state.title || "")}"></label>
       <div class="grid2"><label class="f"><span>Код (авто)</span><input class="inp" id="ne-code" placeholder="${esc(state.codeHint || "S01")}"></label>
       <label class="f"><span>Дата выхода</span><input class="inp" type="date" id="ne-date" value="${state.date || ""}"></label></div>
-      <div class="muted small">Будут созданы задачи: сценарий + ${projChannels(p.id).length} × (озвучка, монтаж, выкладка). Сроки — по настройкам проекта: сценарий за ${p.script_offset} дн., озвучка за ${p.voice_offset}, монтаж за ${p.edit_offset}.</div>
+      <div class="muted small">${p.drive_folder_id ? `📁 На Диске появится папка «${esc(state.codeHint || "…")} ${esc(state.title || "Название")}» с подпапками 1_Сценарий, 2_Озвучка, 3_Готовое видео.<br>` : ""}Сроки — по настройкам проекта: сценарий за ${p.script_offset} дн. до выхода, озвучка в день сценария, монтаж за ${p.edit_offset} дн.</div>
     </div>
     <button class="btn block" data-act="create-episode">Создать</button>`;
   };
 }
+
+const folderLink = (id) => `https://drive.google.com/drive/folders/${id}`;
 
 function nextCode(pid) {
   let max = 0;
@@ -598,9 +603,13 @@ async function suggestDate(state) {
   try {
     const r = await api("episode.suggest", { project_id: state.project_id });
     state.date = r.publish_date;
+    if (r.code) state.codeHint = r.code; // номер с учётом папок на Диске
     if (ui.sheet && ui.newEp === state) {
-      const el = document.getElementById("ne-date");
-      if (el && !el.dataset.touched) el.value = state.date;
+      const t = document.getElementById("ne-title"), d = document.getElementById("ne-date");
+      state.title = t ? t.value : state.title;
+      if (d && d.dataset.touched) state.date = d.value;
+      ui.sheet.render();
+      if (d && d.dataset.touched) document.getElementById("ne-date").dataset.touched = "1";
     }
   } catch (_) {}
 }
@@ -741,7 +750,7 @@ const handlers = {
       project_id: Number(document.getElementById("ne-project").value), title,
       code: document.getElementById("ne-code").value.trim() || undefined,
       publish_date: document.getElementById("ne-date").value || undefined,
-    }, "🎬 Выпуск создан, пост в группе");
+    }, "🎬 Выпуск создан: папка на Диске и пост в группе");
     if (r) openSheet(episodeSheet(r.id));
   },
   "edit-project": (el) => openProject(Number(el.dataset.id)),

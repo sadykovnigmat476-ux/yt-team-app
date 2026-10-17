@@ -42,7 +42,7 @@
   function createEpisode(b) {
     const p = st.projects.find((x) => x.id === b.project_id);
     const codes = st.episodes.filter((e) => e.project_id === p.id).map((e) => +(e.code.match(/\d+/) || [0])[0]);
-    const e = { id: eid++, project_id: p.id, code: b.code || "S" + String(Math.max(0, ...codes) + 1).padStart(2, "0"), title: b.title, publish_date: b.publish_date || add(today, 7), notes: null };
+    const e = { id: eid++, project_id: p.id, drive_folder_id: "demo" + eid, code: b.code || "S" + String(Math.max(0, ...codes) + 1).padStart(2, "0"), title: b.title, publish_date: b.publish_date || add(today, 7), notes: null };
     st.episodes.push(e);
     for (const s of STAGES) {
       const due = add(e.publish_date, -p[s + "_offset"]);
@@ -70,7 +70,7 @@
     await new Promise((r) => setTimeout(r, 120));
     switch (action) {
       case "state": return clone({ ...st, today });
-      case "episode.suggest": return { publish_date: add(today, 7) };
+      case "episode.suggest": return { publish_date: add(today, 7), code: b.project_id === 3 ? "11" : "S0" + (st.episodes.filter((e) => e.project_id === b.project_id).length + 1), drive: true };
       case "episode.create": return { id: createEpisode(b).id };
       case "episode.update": Object.assign(st.episodes.find((e) => e.id === b.id), Object.fromEntries(Object.entries(b).filter(([k]) => k !== "action" && k !== "id"))); return {};
       case "episode.delete": st.episodes = st.episodes.filter((e) => e.id !== b.id); st.tasks = st.tasks.filter((t) => t.episode_id !== b.id); return {};
