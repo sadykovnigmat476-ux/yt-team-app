@@ -73,7 +73,7 @@
       case "episode.suggest": return { publish_date: add(today, 7), code: b.project_id === 3 ? "11" : "S0" + (st.episodes.filter((e) => e.project_id === b.project_id).length + 1), drive: true };
       case "episode.create": return { id: createEpisode(b).id };
       case "episode.update": Object.assign(st.episodes.find((e) => e.id === b.id), Object.fromEntries(Object.entries(b).filter(([k]) => k !== "action" && k !== "id"))); return {};
-      case "episode.delete": st.episodes = st.episodes.filter((e) => e.id !== b.id); st.tasks = st.tasks.filter((t) => t.episode_id !== b.id); return {};
+      case "episode.delete": st.episodes = st.episodes.filter((e) => e.id !== b.id); st.tasks = st.tasks.filter((t) => t.episode_id !== b.id); return { folder: "trashed" };
       case "tasks.done": st.tasks.filter((t) => b.ids.includes(t.id)).forEach((t) => (t.done_at = b.done ? "x" : null)); return { changed: b.ids.length };
       case "tasks.assign": st.tasks.filter((t) => b.ids.includes(t.id)).forEach((t) => { if ("assignee_id" in b) t.assignee_id = b.assignee_id; if ("due_date" in b) t.due_date = b.due_date; }); return {};
       case "link.add": st.links.push({ id: lid++, episode_id: b.episode_id, stage: b.stage || null, url: b.url, title: b.title || null }); return {};

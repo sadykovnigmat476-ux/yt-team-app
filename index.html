@@ -738,9 +738,11 @@ const handlers = {
   "open-link": (el, ev) => { ev.preventDefault(); if (tg && tg.openLink && tg.initData) tg.openLink(el.href); else window.open(el.href, "_blank"); },
   "del-link": async (el) => { if (await confirmBox("Удалить ссылку?")) act("link.delete", { id: Number(el.dataset.id) }); },
   "del-episode": async (el) => {
-    if (await confirmBox("Удалить выпуск со всеми задачами? Посты в группе тоже удалятся.")) {
-      const ok = await act("episode.delete", { id: Number(el.dataset.id) }, "Удалено");
-      if (ok) closeSheet();
+    if (await confirmBox("Удалить выпуск со всеми задачами? Посты в группе тоже удалятся. Пустую папку на Диске бот уберёт в корзину, папку с файлами — оставит.")) {
+      const r = await act("episode.delete", { id: Number(el.dataset.id) });
+      if (!r) return;
+      toast(r.folder === "kept" ? "Удалено. Папка на Диске оставлена — в ней есть файлы" : r.folder === "trashed" ? "Удалено, пустая папка — в корзине Диска" : "Удалено");
+      closeSheet();
     }
   },
   "create-episode": async () => {
