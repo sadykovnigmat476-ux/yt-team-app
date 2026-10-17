@@ -25,13 +25,19 @@
     --danger-bg: color-mix(in srgb, var(--danger) 14%, transparent);
     --accent-bg: color-mix(in srgb, var(--accent) 14%, transparent);
     --radius: 14px;
+    /* вырезы и «чёлки»: системные (iOS) и от Telegram (полноэкранный режим на телефонах) */
+    --safe-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+    --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
+    --nav-h: 60px;
+    /* высота окна: Telegram отдаёт её сам (на Android меняется, когда открыта клавиатура) */
+    --vh: var(--tg-viewport-height, 100vh);
   }
   @media (prefers-color-scheme: dark) {
     :root:not(.tg) { --bg: #17181c; --bg2: #0f1013; --card: #1f2127; --text: #f1f2f4; --hint: #8b919c; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--bg2); color: var(--text); font: 15px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
-  body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); overscroll-behavior-y: none; }
+  html, body { margin: 0; background: var(--bg2); color: var(--text); font: 15px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body { padding-top: var(--safe-top); padding-bottom: calc(var(--nav-h) + 12px + var(--safe-bottom)); overscroll-behavior-y: none; }
   button, input, select, textarea { font: inherit; color: inherit; }
   a { color: var(--link); text-decoration: none; }
   main { padding: 12px 12px 24px; max-width: 720px; margin: 0 auto; }
@@ -74,12 +80,16 @@
   .progress i.late { background: color-mix(in srgb, var(--danger) 35%, transparent); }
   .stage-labels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; font-size: 11px; color: var(--hint); margin-top: 3px; }
 
-  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--card); border-top: 1px solid var(--sep); padding-bottom: env(safe-area-inset-bottom); z-index: 5; }
-  nav button { flex: 1; border: 0; background: none; padding: 8px 0 10px; font-size: 11px; color: var(--hint); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  nav button span { font-size: 20px; line-height: 1.1; filter: grayscale(1); opacity: .7; }
+  /* «+» живёт в нижней панели, а не висит поверх карточек — ничего не закрывает ни на одном экране */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--sep); padding-bottom: var(--safe-bottom); z-index: 5; }
+  nav .in { display: flex; max-width: 720px; height: var(--nav-h); margin: 0 auto; }
+  nav button { flex: 1; min-width: 0; border: 0; background: none; padding: 6px 0 8px; font-size: 11px; color: var(--hint); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  nav button span { height: 30px; display: grid; place-items: center; font-size: 20px; line-height: 1; filter: grayscale(1); opacity: .7; }
   nav button.on { color: var(--accent); font-weight: 600; }
   nav button.on span { filter: none; opacity: 1; }
-  .fab { position: fixed; right: 16px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 54px; height: 54px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-text); font-size: 28px; box-shadow: 0 4px 14px rgba(0,0,0,.2); cursor: pointer; z-index: 6; }
+  nav button.add span { filter: none; opacity: 1; width: 46px; height: 30px; border-radius: 12px; display: grid; place-items: center; background: var(--accent); color: var(--accent-text); font-size: 24px; font-weight: 500; }
+  nav button.add { color: var(--accent); }
+  @media (hover: hover) { nav button:hover { color: var(--text); } .btn:hover { filter: brightness(1.06); } }
 
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
   .cal-head b { font-size: 17px; }
@@ -97,7 +107,7 @@
   .day .dl i.ok { background: var(--ok); }
 
   .sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 20; display: none; }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 92vh; overflow-y: auto; background: var(--bg2); border-radius: 18px 18px 0 0; padding: 8px 12px calc(24px + env(safe-area-inset-bottom)); z-index: 21; display: none; max-width: 720px; margin: 0 auto; }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: calc(var(--vh) - var(--safe-top) - 24px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: var(--bg2); border-radius: 18px 18px 0 0; padding: 8px 12px calc(24px + var(--safe-bottom)); z-index: 21; display: none; max-width: 720px; margin: 0 auto; }
   .sheet.open, .sheet-bg.open { display: block; }
   .sheet .grip { width: 40px; height: 4px; border-radius: 2px; background: var(--sep); margin: 2px auto 10px; }
   .sheet-title { display: flex; align-items: center; gap: 8px; margin: 0 4px 10px; }
@@ -123,12 +133,37 @@
   .member:first-child { border-top: 0; }
   .ava { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-bg); color: var(--accent); display: grid; place-items: center; font-weight: 700; }
   .clickable { cursor: pointer; }
+  .list > .card:last-child { margin-bottom: 8px; }
+
+  /* Телефоны и планшеты с пальцем: поля от 16px, иначе iOS приближает страницу при вводе; кнопки крупнее */
+  @media (pointer: coarse) {
+    .inp, .stage-box select, .stage-box input[type=date] { font-size: 16px; }
+    .btn.sm { padding: 8px 12px; }
+    .icon-btn { padding: 8px 10px; }
+  }
+
+  /* Планшет и ПК: шире, карточки в две-три колонки, шторка — окно по центру, календарь рядом с днём */
+  @media (min-width: 760px) {
+    main { max-width: 1080px; padding: 16px 20px 28px; }
+    .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 8px; align-items: start; }
+    .list > .card, .list > .card:last-child { margin-bottom: 0; }
+    .onb { max-width: 720px; }
+    .cal-wrap { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+    .cal-wrap > .side > h2:first-child { margin-top: 0; }
+    .day { min-height: 74px; }
+    .settings { max-width: 760px; margin: 0 auto; }
+    .sheet { left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 40px)); max-height: calc(var(--vh) - 48px); border-radius: 18px; padding: 12px 16px 20px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+    .sheet .grip { display: none; }
+  }
+  @media (min-width: 760px) and (pointer: fine) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+  }
 </style>
 </head>
 <body>
 <main id="view"><div class="loading">Загрузка…</div></main>
-<button class="fab" id="fab" data-act="new-episode" aria-label="Новый выпуск" hidden>+</button>
-<nav id="tabs"></nav>
+<nav><div class="in" id="tabs"></div></nav>
 <div class="sheet-bg" id="sheet-bg" data-act="close-sheet"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
@@ -281,9 +316,11 @@ async function act(action, body, msg) {
 
 // ---------- рендер ----------
 function render() {
-  document.getElementById("tabs").innerHTML = TABS.map((t) =>
-    `<button class="${ui.tab === t.id ? "on" : ""}" data-act="tab" data-tab="${t.id}"><span>${t.e}</span>${t.n}</button>`).join("");
-  document.getElementById("fab").hidden = !(S.projects.length && (ui.tab === "episodes" || ui.tab === "calendar" || ui.tab === "my"));
+  const tabs = TABS.map((t) =>
+    `<button class="${ui.tab === t.id ? "on" : ""}" data-act="tab" data-tab="${t.id}"><span>${t.e}</span>${t.n}</button>`);
+  // «+» посередине панели: всегда под пальцем и не перекрывает карточки
+  if (S.projects.length) tabs.splice(2, 0, `<button class="add" data-act="new-episode" aria-label="Новый выпуск"><span>+</span>Выпуск</button>`);
+  document.getElementById("tabs").innerHTML = tabs.join("");
   const v = document.getElementById("view");
   v.innerHTML = { my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, settings: viewSettings }[ui.tab]();
   if (ui.sheet) ui.sheet.render();
@@ -313,7 +350,7 @@ function onboarding() {
   const steps = setupSteps();
   if (steps.every((x) => x.ok)) return "";
   const done = steps.filter((x) => x.ok).length;
-  return `<div class="card"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${steps.length}</span></div>
+  return `<div class="card onb"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${steps.length}</span></div>
     ${steps.map((x) => `<div class="row" style="padding:7px 0;border-top:1px solid var(--sep)"><span>${x.ok ? "✅" : "⬜"}</span>
       <div class="grow small">${esc(x.t)}${!x.ok && x.hint ? `<div class="muted">${esc(x.hint)}</div>` : ""}</div>
       ${!x.ok && x.btn ? `<button class="btn sm" data-act="edit-project" data-id="${x.btn[1]}">${esc(x.btn[0])}</button>` : ""}</div>`).join("")}</div>`;
@@ -346,10 +383,11 @@ function taskGroupCard(g) {
       ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine[0].id}">Готово</button>` : "";
   const waitTxt = g.waiting ? `<div class="muted" style="margin-top:6px">⏳ ждёт: ${META[PREV[g.stage]].n.toLowerCase()}</div>` : "";
   const folder = e.drive_folder_id ? `<a class="btn ghost sm" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Папка</a>` : "";
+  // код выпуска — в начале строки: при обрезке «…» теряется хвост названия, а не то, о каком выпуске речь
   return `<div class="card">
     <div class="row"><div class="grow clickable" data-act="open-episode" data-id="${e.id}">
-      <div class="ellipsis"><b>${m.e} ${m.n}</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}</div>
-      <div class="muted ellipsis">«${esc(e.title)}» · выход ${fmt(e.publish_date)}</div></div>
+      <div class="ellipsis"><b>${m.e} ${m.n} · ${esc(e.code)}</b> ${esc(e.title)}</div>
+      <div class="muted ellipsis">${esc(p.emoji)} ${esc(p.name)} · выход ${fmt(e.publish_date, true)}</div></div>
       ${g.waiting ? "" : dueBadge(g.due)}</div>
     ${langs}${waitTxt}${all || folder ? `<div class="row" style="margin-top:8px;justify-content:flex-end">${folder}${all}</div>` : ""}</div>`;
 }
@@ -363,7 +401,7 @@ function langChip(t) {
 function viewMy() {
   const gs = myGroups();
   const active = gs.filter((g) => !g.waiting);
-  const sec = (title, list) => list.length ? `<h2>${title}</h2>${list.map(taskGroupCard).join("")}` : "";
+  const sec = (title, list) => list.length ? `<h2>${title}</h2><div class="list">${list.map(taskGroupCard).join("")}</div>` : "";
   const overdue = active.filter((g) => g.due && g.due < S.today);
   const today = active.filter((g) => g.due === S.today);
   const soon = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) <= 7);
@@ -406,10 +444,10 @@ function viewEpisodes() {
   const done = list.filter((e) => episodeDone(e.id));
   const active = list.filter((e) => !episodeDone(e.id));
   let html = onboarding() + projectChips();
-  html += active.length ? active.map(episodeRow).join("") : (S.projects.length ? `<div class="empty">Активных выпусков нет.<br>Жми «+», чтобы добавить.</div>` : "");
+  html += active.length ? `<div class="list">${active.map(episodeRow).join("")}</div>` : (S.projects.length ? `<div class="empty">Активных выпусков нет.<br>Жми «+», чтобы добавить.</div>` : "");
   if (done.length) {
     html += `<h2 class="clickable" data-act="toggle-done">${ui.showDone ? "▾" : "▸"} Готовые (${done.length})</h2>`;
-    if (ui.showDone) html += done.slice().reverse().map(episodeRow).join("");
+    if (ui.showDone) html += `<div class="list">${done.slice().reverse().map(episodeRow).join("")}</div>`;
   }
   return html;
 }
@@ -445,10 +483,10 @@ function viewCalendar() {
     const dots = dls.slice(0, 8).map((g) => `<i class="${g.open === 0 ? "ok" : d < S.today ? "late" : ""}"></i>`).join("");
     cells += `<div class="${cls}" data-act="day" data-d="${d}"><span class="n">${Number(d.slice(8))}</span><span class="ev">${ev}</span><span class="dl">${dots}</span></div>`;
   }
-  let html = projectChips();
+  let html = projectChips() + `<div class="cal-wrap"><div>`;
   html += `<div class="cal-head"><button class="btn ghost sm" data-act="month" data-dir="-1">‹</button><b>${MONTHS[m - 1]} ${y}</b><button class="btn ghost sm" data-act="month" data-dir="1">›</button></div>`;
   html += `<div class="cal">${WD.map((w) => `<div class="wd">${w}</div>`).join("")}${cells}</div>`;
-  html += `<div class="muted small" style="margin:8px 4px">Значок проекта — день выхода, точки — сроки этапов (красные — просрочены, зелёные — сделаны).</div>`;
+  html += `<div class="muted small" style="margin:8px 4px">Значок проекта — день выхода, точки — сроки этапов (красные — просрочены, зелёные — сделаны).</div></div><div class="side">`;
   const d = ui.day || S.today;
   const { pubs, dls } = dayEvents(d);
   html += `<h2>${fmt(d, true)}${d === S.today ? " · сегодня" : ""}</h2>`;
@@ -462,13 +500,13 @@ function viewCalendar() {
     const who = [...new Set(epTasks(e.id).filter((t) => t.stage === g.stage).map((t) => (mem(t.assignee_id) || { name: "—" }).name))].join(", ");
     html += `<div class="card clickable row" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>${META[g.stage].e} ${META[g.stage].n}</b> · ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">${esc(who)} · «${esc(e.title)}»</div></div><span class="badge ${g.open === 0 ? "ok" : d < S.today ? "late" : ""}">${g.open === 0 ? "✓" : g.total > 1 ? `${g.total - g.open}/${g.total}` : "срок"}</span></div>`;
   }
-  return html;
+  return html + `</div></div>`;
 }
 
 // --- Настройки
 function viewSettings() {
   const admin = S.me.is_admin;
-  let html = onboarding() + `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
+  let html = `<div class="settings">` + onboarding() + `<h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
       <div class="ava">${esc(m.name.slice(0, 1).toUpperCase())}</div>
       <div class="grow"><div>${esc(m.name)}${m.tg_id === S.me.tg_id ? " <span class='muted'>(ты)</span>" : ""}</div>
       <div class="muted">${m.username ? "@" + esc(m.username) + " · " : ""}${m.is_admin ? "админ" : "участник"}${m.can_dm ? "" : " · ⚠️ не писал боту в личку"}</div></div>
@@ -502,7 +540,7 @@ function viewSettings() {
     <div class="grid2"><label class="f"><span>Утренний план, час</span><input class="inp" id="set-morning" type="number" min="0" max="23" value="${st.morning_hour}" ${admin ? "" : "disabled"}></label>
     <label class="f"><span>Вечернее напоминание, час</span><input class="inp" id="set-evening" type="number" min="0" max="23" value="${st.evening_hour}" ${admin ? "" : "disabled"}></label></div>
     ${admin ? `<button class="btn block" data-act="save-settings">Сохранить</button>` : ""}
-    <div class="muted small" style="margin-top:8px">${st.group_linked ? "✅ Группа подключена." : "⚠️ Группа не подключена: добавь бота в группу админом и напиши там /setup."} По понедельникам бот кладёт план недели в тему, привязанную командой /bind → «дайджесты».</div></div>`;
+    <div class="muted small" style="margin-top:8px">${st.group_linked ? "✅ Группа подключена." : "⚠️ Группа не подключена: добавь бота в группу админом и напиши там /setup."} По понедельникам бот кладёт план недели в тему, привязанную командой /bind → «дайджесты».</div></div></div>`;
   return html;
 }
 
@@ -791,10 +829,22 @@ const handlers = {
     morning_hour: Number(document.getElementById("set-morning").value),
     evening_hour: Number(document.getElementById("set-evening").value),
   }, "Сохранено"),
-  "rename": async (el) => {
-    const m = mem(Number(el.dataset.id));
-    const name = window.prompt("Имя в боте:", m.name);
-    if (name && name.trim()) act("member.update", { tg_id: m.tg_id, name: name.trim() });
+  // своя шторка вместо window.prompt: prompt в Telegram на iOS и Android не показывается
+  "rename": (el) => {
+    const id = Number(el.dataset.id);
+    openSheet(() => {
+      const m = mem(id);
+      if (!m) { closeSheet(); return ""; }
+      return `<div class="sheet-title"><b>Имя в боте</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+        <div class="card"><label class="f"><span>Как бот называет ${m.username ? "@" + esc(m.username) : "участника"} в постах и напоминаниях</span>
+        <input class="inp" id="rn-name" value="${esc(m.name)}" maxlength="40" enterkeyhint="done"></label></div>
+        <button class="btn block" data-act="rename-save" data-id="${id}">Сохранить</button>`;
+    });
+  },
+  "rename-save": async (el) => {
+    const name = document.getElementById("rn-name").value.trim();
+    if (!name) return toast("Имя не может быть пустым");
+    if (await act("member.update", { tg_id: Number(el.dataset.id), name }, "Сохранено")) closeSheet();
   },
 };
 
@@ -803,6 +853,12 @@ document.addEventListener("click", (ev) => {
   if (!el || el.tagName === "SELECT") return;
   const h = handlers[el.dataset.act];
   if (h) h(el, ev);
+});
+
+// ПК: Esc закрывает шторку, Enter в поле имени — сохраняет
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && ui.sheet) closeSheet();
+  if (ev.key === "Enter" && ev.target.id === "rn-name") document.querySelector("#sheet [data-act='rename-save']").click();
 });
 
 document.addEventListener("change", (ev) => {
@@ -848,6 +904,14 @@ async function start() {
     tg.expand();
     if (tg.initData) document.documentElement.classList.add("tg");
     if (tg.BackButton) tg.BackButton.onClick(closeSheet);
+    const since = (v) => tg.isVersionAtLeast && tg.isVersionAtLeast(v);
+    try {
+      // iOS/Android: свайп вниз по списку не должен сворачивать приложение
+      if (since("7.7")) tg.disableVerticalSwipes();
+      // шапка и низ окна Telegram — в цвет фона приложения, без белых полос
+      if (since("6.1")) { tg.setHeaderColor("secondary_bg_color"); tg.setBackgroundColor("secondary_bg_color"); }
+      if (since("7.10")) tg.setBottomBarColor("secondary_bg_color");
+    } catch (_) {}
   }
   try {
     await load();
