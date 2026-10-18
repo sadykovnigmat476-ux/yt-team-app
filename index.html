@@ -182,6 +182,59 @@
   @media (hover: hover) and (pointer: fine) {
     .chips { flex-wrap: wrap; overflow: visible; }
   }
+  /* Цвет проекта: на элементе задаётся --pc */
+  .pdot { width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--accent)); display: inline-block; flex-shrink: 0; }
+  .pc-stripe { box-shadow: inset 4px 0 0 var(--pc, var(--accent)); }
+  .swatches { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; background: var(--pc); box-shadow: 0 0 0 2px var(--bg2), 0 0 0 2px transparent; }
+  .swatch.on { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--pc); }
+
+  /* «Сейчас»: главная задача крупно */
+  .hero { position: relative; border-radius: 20px; padding: 16px 16px 14px; margin-bottom: 10px; overflow: hidden;
+    background: linear-gradient(140deg, color-mix(in srgb, var(--pc) 30%, var(--card)) 0%, var(--card) 72%);
+    border: 1px solid color-mix(in srgb, var(--pc) 40%, transparent); }
+  .hero .bg-emoji { position: absolute; right: -8px; top: -14px; font-size: 104px; opacity: .13; transform: rotate(12deg); pointer-events: none; }
+  .hero .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--pc); display: flex; align-items: center; gap: 6px; }
+  .hero .stage { font-size: 27px; font-weight: 800; line-height: 1.12; margin: 6px 0 4px; letter-spacing: -.01em; }
+  .hero .ep { font-size: 15px; font-weight: 600; cursor: pointer; }
+  .hero .due { display: inline-flex; gap: 6px; align-items: center; margin-top: 10px; font-weight: 700; font-size: 14px; padding: 5px 11px; border-radius: 999px; background: var(--bg2); }
+  .hero .due.late { background: var(--danger-bg); color: var(--danger); }
+  .hero .due.today { background: var(--warn-bg); color: var(--warn); }
+  .hero .acts { display: flex; gap: 8px; margin-top: 14px; }
+  .hero .acts .btn { flex: 1; padding: 12px; font-size: 15px; text-align: center; }
+  .hero .progress { margin-top: 12px; }
+  .counters { display: flex; gap: 6px; margin: 0 0 14px; flex-wrap: wrap; }
+  .counter { display: flex; align-items: center; gap: 6px; background: var(--card); border-radius: 12px; padding: 7px 11px; font-size: 13px; color: var(--hint); }
+  .counter b { font-size: 16px; color: var(--text); }
+  .counter.bad b { color: var(--danger); }
+  .next-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: var(--card); border-radius: 12px; margin-bottom: 6px; cursor: pointer; }
+  .next-row .t { flex: 1; min-width: 0; }
+  .calm { text-align: center; padding: 26px 16px; }
+  .calm .big { font-size: 46px; }
+  /* Кнопки внизу экрана Telegram заменяют дубли на странице */
+  .has-main .dup-main, .has-second .dup-second { display: none !important; }
+
+  /* Доска выпусков по этапам */
+  .seg { display: inline-flex; background: var(--card); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: none; padding: 5px 11px; border-radius: 8px; font-size: 13px; cursor: pointer; color: var(--hint); }
+  .seg button.on { background: var(--accent); color: var(--accent-text); }
+  .board { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -12px; padding: 2px 12px 12px; scrollbar-width: none; }
+  .board::-webkit-scrollbar { display: none; }
+  .col { flex: 0 0 min(78vw, 300px); scroll-snap-align: start; background: color-mix(in srgb, var(--card) 50%, transparent); border-radius: 16px; padding: 8px; min-height: 140px; }
+  .col-h { display: flex; align-items: center; gap: 6px; padding: 4px 6px 8px; font-weight: 700; font-size: 14px; }
+  .col-h .n { margin-left: auto; font-size: 12px; color: var(--hint); background: var(--bg2); border-radius: 999px; padding: 1px 8px; font-weight: 600; }
+  .col-h .n.late { color: var(--danger); background: var(--danger-bg); }
+  .kcard { background: var(--card); border-radius: 12px; padding: 9px 11px 9px 13px; margin-bottom: 7px; cursor: pointer; box-shadow: inset 4px 0 0 var(--pc); }
+  .kcard .tt { font-size: 14px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+  .kcard .mt { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: var(--hint); }
+  .mini-ava { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--accent-bg); color: var(--accent); }
+  .col-empty { color: var(--hint); font-size: 12.5px; text-align: center; padding: 18px 6px; }
+  @media (min-width: 760px) {
+    .board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); overflow: visible; margin: 0; padding: 2px 0 12px; }
+    .col { flex: none; }
+    .now-wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .now-wrap > div > h2:first-child { margin-top: 0; }
+  }
   @media (min-width: 760px) and (pointer: fine) {
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
@@ -197,9 +250,10 @@
 
 <script>
 "use strict";
-const tg = window.Telegram && window.Telegram.WebApp;
+let tg = window.Telegram && window.Telegram.WebApp;
 const qs = new URLSearchParams(location.search);
 const MOCK = qs.has("mock");
+const FAKE_NATIVE = MOCK && qs.has("native");
 const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || "";
 
 const STAGES = ["script", "voice", "edit", "upload"];
@@ -214,17 +268,21 @@ const MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл
 const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
 const KINDS = [{ id: "script", e: "📝", n: "Сценарий" }, { id: "voice", e: "🎙", n: "Озвучка" }, { id: "video", e: "🎬", n: "Готовое видео" }];
 const TABS = [
-  { id: "my", e: "✅", n: "Мои" },
+  { id: "my", e: "⚡", n: "Сейчас" },
   { id: "episodes", e: "🎬", n: "Выпуски" },
   { id: "calendar", e: "🗓", n: "Календарь" },
   { id: "stats", e: "📊", n: "Статистика" },
   { id: "settings", e: "⚙️", n: "Настройки" },
 ];
 
+// Цвета проектов: свой (выбирается в настройках проекта) или из палитры по порядку
+const PALETTE = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
+
 let S = null;
 const ui = {
   tab: store("tab") || "my", project: store("project") || "all", showDone: false, month: null, day: null, sheet: null,
   statsDays: Number(store("statsDays")) || 30, stats: null, statsLoading: null, statsError: null,
+  epView: store("epView") || "board", showWaiting: false, hero: null,
 };
 
 function store(k, v) {
@@ -296,6 +354,9 @@ function isActive(t) {
   const b = blocker(t);
   return !b || !!b.done_at;
 }
+const pcolor = (p) => (p && p.color) || PALETTE[Math.max(0, S.projects.indexOf(p)) % PALETTE.length];
+const pc = (p) => `--pc:${pcolor(p)}`;
+const initial = (m) => esc(((m && m.name) || "?").slice(0, 1).toUpperCase());
 const topicBound = (pid, kind) => (S.topics || []).some((t) => t.project_id === pid && t.kind === kind) || !!(proj(pid) || {}).thread_id;
 const topicStatus = (p) => KINDS.map((k) => k.e + (topicBound(p.id, k.id) ? "✅" : "⚠️")).join(" ");
 function stageInfo(eid, stage) {
@@ -355,6 +416,7 @@ function render() {
   const v = document.getElementById("view");
   v.innerHTML = ({ my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, stats: viewStats, settings: viewSettings }[ui.tab] || viewMy)();
   if (ui.sheet) ui.sheet.render();
+  syncNative();
 }
 
 function setupSteps() {
@@ -420,7 +482,7 @@ function taskGroupCard(g) {
   const waitTxt = g.waiting ? `<div class="muted" style="margin-top:6px">⏳ ждёт: ${META[PREV[g.stage]].n.toLowerCase()}</div>` : "";
   const folder = e.drive_folder_id ? `<a class="btn ghost sm" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Папка</a>` : "";
   // код выпуска — в начале строки: при обрезке «…» теряется хвост названия, а не то, о каком выпуске речь
-  return `<div class="card">
+  return `<div class="card pc-stripe" style="${pc(p)}">
     <div class="row"><div class="grow clickable" data-act="open-episode" data-id="${e.id}">
       <div class="ellipsis"><b>${m.e} ${m.n} · ${esc(e.code)}</b> ${esc(e.title)}</div>
       <div class="muted ellipsis">${esc(p.emoji)} ${esc(p.name)} · выход ${fmt(e.publish_date, true)}</div></div>
@@ -434,28 +496,101 @@ function langChip(t) {
   return `<button class="chip lang ${st}" data-act="toggle" data-id="${t.id}">${flag(c && c.lang)} ${esc((c && c.lang || "?").toUpperCase())}${t.done_at ? " ✓" : ""}</button>`;
 }
 
+/** Прогресс выпуска по 4 этапам (зелёная заливка, красный — просрочено, синий — в работе). */
+function progressBars(eid) {
+  return `<div class="progress">${STAGES.map((st) => {
+    const i = stageInfo(eid, st);
+    const pct = i.total ? Math.round(i.done / i.total * 100) : 0;
+    return `<i class="${i.late ? "late" : i.active ? "active" : ""}" title="${META[st].n}"><b style="width:${pct}%"></b></i>`;
+  }).join("")}</div>`;
+}
+
+function dueText(due) {
+  if (!due) return { t: "без срока", cls: "" };
+  const n = daysBetween(S.today, due);
+  if (n < 0) return { t: `⚠️ просрочено на ${-n} дн.`, cls: "late" };
+  if (n === 0) return { t: "🔥 срок сегодня", cls: "today" };
+  if (n === 1) return { t: "⏰ срок завтра", cls: "" };
+  return { t: `📅 до ${fmt(due, true)}`, cls: "" };
+}
+
+/** Главная задача: самая срочная из тех, что можно делать прямо сейчас. */
+function heroCard(g) {
+  const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
+  const d = dueText(g.due);
+  const single = g.info.total === 1 && !g.info.ts[0].channel_id;
+  const langs = single ? "" : `<div class="chips" style="margin-top:10px;flex-wrap:wrap">${g.info.ts.map(langChip).join("")}</div>`;
+  const done = g.activeMine.length > 1
+    ? `<button class="btn dup-main" data-act="done" data-ids="${g.activeMine.map((t) => t.id).join(",")}">✅ Все ${g.activeMine.length} готовы</button>`
+    : g.activeMine.length === 1 && single ? `<button class="btn dup-main" data-act="done" data-ids="${g.activeMine[0].id}">✅ Готово</button>` : "";
+  const folder = e.drive_folder_id ? `<a class="btn ghost dup-second" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Папка</a>` : "";
+  return `<div class="hero" style="${pc(p)}">
+    <div class="bg-emoji">${m.e}</div>
+    <div class="kicker"><span class="pdot"></span>${esc(p.emoji)} ${esc(p.name)} · главное сейчас</div>
+    <div class="stage">${m.e} ${m.n}</div>
+    <div class="ep" data-act="open-episode" data-id="${e.id}">${esc(e.code)} · ${esc(e.title)} ›</div>
+    <div class="muted small">выход ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}</div>
+    <span class="due ${d.cls}">${d.t}</span>${langs}
+    ${progressBars(e.id)}
+    ${folder || done ? `<div class="acts">${folder}${done}</div>` : ""}
+  </div>`;
+}
+
+function nextRow(g) {
+  const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
+  return `<div class="next-row" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
+    <span class="pdot"></span><span style="font-size:18px">${m.e}</span>
+    <div class="t"><div class="ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div>
+      <div class="muted small ellipsis">${m.n} · ${esc(p.name)}${g.waiting ? ` · ждёт: ${META[PREV[g.stage]].n.toLowerCase()}` : ""}</div></div>
+    ${g.waiting ? `<span class="badge">⏳</span>` : dueBadge(g.due)}</div>`;
+}
+
+/** Кого ждём: для моих задач, которые ещё нельзя начать, — чей предыдущий этап. */
+function waitingFor(g) {
+  const t = g.info.ts.find((x) => !x.done_at);
+  const b = t && blocker(t);
+  const who = b && mem(b.assignee_id);
+  return b ? `${META[b.stage].e} ${META[b.stage].n.toLowerCase()} ${esc(ep(g.eid).code)}${who ? ` от ${esc(who.name)}` : ""}` : "";
+}
+
 function viewMy() {
   const gs = myGroups();
   const active = gs.filter((g) => !g.waiting);
-  const sec = (title, list) => list.length ? `<h2>${title}</h2><div class="list">${list.map(taskGroupCard).join("")}</div>` : "";
-  const overdue = active.filter((g) => g.due && g.due < S.today);
-  const today = active.filter((g) => g.due === S.today);
-  const soon = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) <= 7);
-  const later = active.filter((g) => !g.due || daysBetween(S.today, g.due) > 7);
   const waiting = gs.filter((g) => g.waiting);
+  const hero = active[0] || null;
+  ui.hero = hero;
+  const overdue = active.filter((g) => g.due && g.due < S.today).length;
+  const today = active.filter((g) => g.due === S.today).length;
+  const week = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) <= 7).length;
   const unassigned = S.tasks.filter((t) => !t.done_at && t.assignee_id == null).length;
   let html = onboarding();
-  html += `<div class="muted" style="margin:0 4px 6px">${fmt(S.today, true)} · привет, ${esc(S.me.name)}</div>`;
-  if (!active.length && !waiting.length && S.projects.length) html += `<div class="empty">🎉 Задач нет.<br>Отдыхай или добавь новый выпуск.</div>`;
-  html += sec("⚠️ Просрочено", overdue) + sec("📌 Сегодня", today) + sec("🔜 На неделе", soon) + sec("Позже", later) + sec("⏳ Ждут предыдущего этапа", waiting);
-  if (unassigned) html += `<div class="card small">⚠️ ${unassigned} задач(и) без ответственного — назначь роли в <a href="#" data-act="tab" data-tab="settings">Настройках</a>.</div>`;
-  return html;
+  html += `<div class="row" style="margin:0 4px 10px"><div class="grow"><div style="font-size:20px;font-weight:800">Привет, ${esc(S.me.name)} 👋</div>
+    <div class="muted">${fmt(S.today, true)}</div></div></div>`;
+  if (!S.projects.length) return html;
+  const counter = (n, label, bad) => `<div class="counter ${bad && n ? "bad" : ""}"><b>${n}</b>${label}</div>`;
+  const left = [];
+  left.push(`<div class="counters">${counter(overdue, "просрочено", true)}${counter(today, "сегодня")}${counter(week, "на неделе")}${waiting.length ? counter(waiting.length, "ждут других") : ""}</div>`);
+  if (hero) left.push(heroCard(hero));
+  else {
+    const w = waiting[0];
+    left.push(`<div class="card calm"><div class="big">🎉</div><b>Сейчас твоих задач нет</b>
+      <div class="muted small" style="margin-top:4px">${w ? `Дальше ждём: ${waitingFor(w)}` : "Отдыхай или запланируй новый выпуск кнопкой «+»."}</div></div>`);
+  }
+  const rest = active.slice(1);
+  const right = [];
+  if (rest.length) right.push(`<h2>Дальше</h2>${rest.map(nextRow).join("")}`);
+  if (waiting.length) {
+    right.push(`<h2 class="clickable" data-act="toggle-waiting">${ui.showWaiting ? "▾" : "▸"} ⏳ Ждут других (${waiting.length})</h2>`);
+    if (ui.showWaiting) right.push(waiting.map(nextRow).join(""));
+  }
+  if (unassigned) right.push(`<div class="card small" style="margin-top:8px">⚠️ ${unassigned} задач(и) без ответственного — назначь роли в <a href="#" data-act="tab" data-tab="settings">Настройках</a>.</div>`);
+  return html + `<div class="now-wrap"><div>${left.join("")}</div><div>${right.join("")}</div></div>`;
 }
 
 // --- Выпуски
 function projectChips() {
   return `<div class="chips"><button class="chip ${ui.project === "all" ? "on" : ""}" data-act="filter" data-p="all">Все</button>${
-    S.projects.map((p) => `<button class="chip ${String(p.id) === ui.project ? "on" : ""}" data-act="filter" data-p="${p.id}">${esc(p.emoji)} ${esc(p.name)}</button>`).join("")}</div>`;
+    S.projects.map((p) => `<button class="chip ${String(p.id) === ui.project ? "on" : ""}" data-act="filter" data-p="${p.id}"><span class="pdot" style="${pc(p)}"></span>${esc(p.emoji)} ${esc(p.name)}</button>`).join("")}</div>`;
 }
 
 function episodeRow(e) {
@@ -468,23 +603,74 @@ function episodeRow(e) {
   const done = episodeDone(e.id);
   const anyLate = STAGES.some((st) => stageInfo(e.id, st).late);
   const badge = done ? `<span class="badge ok">готово</span>` : `<span class="badge ${anyLate ? "late" : daysBetween(S.today, e.publish_date) <= 0 ? "today" : ""}">${fmt(e.publish_date)}</span>`;
-  return `<div class="card clickable" data-act="open-episode" data-id="${e.id}">
+  return `<div class="card clickable pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
     <div class="row"><div class="grow"><div class="ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div>
     <div class="muted ellipsis">${esc(p.emoji)} ${esc(p.name)} · ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}</div></div>${badge}</div>
     <div class="progress">${bars}</div>
     <div class="stage-labels">${STAGES.map((s) => `<span>${META[s].e} ${META[s].n}</span>`).join("")}</div></div>`;
 }
 
-function viewEpisodes() {
-  let list = S.episodes.filter((e) => ui.project === "all" || String(e.project_id) === ui.project);
-  const done = list.filter((e) => episodeDone(e.id));
-  const active = list.filter((e) => !episodeDone(e.id));
-  let html = onboarding() + projectChips();
-  html += active.length ? `<div class="list">${active.map(episodeRow).join("")}</div>` : (S.projects.length ? `<div class="empty">Активных выпусков нет.<br>Жми «+», чтобы добавить.</div>` : "");
-  if (done.length) {
-    html += `<h2 class="clickable" data-act="toggle-done">${ui.showDone ? "▾" : "▸"} Готовые (${done.length})</h2>`;
-    if (ui.showDone) html += `<div class="list">${done.slice().reverse().map(episodeRow).join("")}</div>`;
+/** На каком этапе выпуск: первый незакрытый; всё закрыто — «Вышло». */
+function epColumn(eid) {
+  for (const st of STAGES) {
+    const i = stageInfo(eid, st);
+    if (i.total && i.done < i.total) return st;
   }
+  return "done";
+}
+const COLS = [...STAGES.map((id) => ({ id, e: META[id].e, n: META[id].n })), { id: "done", e: "🎉", n: "Вышло" }];
+
+function kanbanCard(e, col) {
+  const p = proj(e.project_id);
+  let meta = "";
+  if (col === "done") meta = `<span style="margin-left:auto" class="badge ok">${fmt(e.publish_date)}</span>`;
+  else {
+    const i = stageInfo(e.id, col);
+    const who = [...new Set(i.ts.filter((t) => !t.done_at).map((t) => t.assignee_id))].map(mem).filter(Boolean);
+    meta = who.map((m) => `<span class="mini-ava" title="${esc(m.name)}">${initial(m)}</span>`).join("")
+      + (i.total > 1 ? `<span class="num">${i.done}/${i.total}</span>` : "")
+      + (!i.active ? `<span title="ждёт предыдущий этап">⏳</span>` : "")
+      + `<span style="margin-left:auto">${i.active ? dueBadge(i.due) : `<span class="badge">выход ${fmt(e.publish_date)}</span>`}</span>`;
+  }
+  return `<div class="kcard" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
+    <div class="muted small ellipsis">${esc(p.emoji)} ${esc(p.name)} · <b style="color:var(--text)">${esc(e.code)}</b></div>
+    <div class="tt">${esc(e.title)}</div><div class="mt">${meta}</div></div>`;
+}
+
+function viewEpisodes() {
+  const list = S.episodes.filter((e) => ui.project === "all" || String(e.project_id) === ui.project);
+  const mode = ui.epView || "board";
+  let html = onboarding() + `<div class="row" style="margin-bottom:6px"><div class="grow" style="min-width:0">${projectChips()}</div></div>
+    <div class="row" style="margin:0 0 10px"><div class="seg"><button class="${mode === "board" ? "on" : ""}" data-act="ep-view" data-v="board">▦ Доска</button><button class="${mode === "list" ? "on" : ""}" data-act="ep-view" data-v="list">☰ Список</button></div></div>`;
+  if (!list.length) return html + (S.projects.length ? `<div class="empty">Выпусков пока нет.<br>Жми «+», чтобы добавить.</div>` : "");
+  if (mode === "list") {
+    const done = list.filter((e) => episodeDone(e.id));
+    const active = list.filter((e) => !episodeDone(e.id));
+    html += active.length ? `<div class="list">${active.map(episodeRow).join("")}</div>` : `<div class="empty">Активных выпусков нет.</div>`;
+    if (done.length) {
+      html += `<h2 class="clickable" data-act="toggle-done">${ui.showDone ? "▾" : "▸"} Готовые (${done.length})</h2>`;
+      if (ui.showDone) html += `<div class="list">${done.slice().reverse().map(episodeRow).join("")}</div>`;
+    }
+    return html;
+  }
+  const byCol = Object.fromEntries(COLS.map((c) => [c.id, []]));
+  for (const e of list) byCol[epColumn(e.id)].push(e);
+  const dueOf = (e, col) => (col === "done" ? e.publish_date : stageInfo(e.id, col).due || e.publish_date);
+  html += `<div class="board">${COLS.map((c) => {
+    let items = byCol[c.id].slice().sort((a, b) => dueOf(a, c.id).localeCompare(dueOf(b, c.id)));
+    let more = "";
+    if (c.id === "done") {
+      items = items.reverse();
+      if (!ui.showDone && items.length > 6) {
+        more = `<button class="btn ghost sm block" data-act="toggle-done">Ещё ${items.length - 6}</button>`;
+        items = items.slice(0, 6);
+      }
+    }
+    const late = c.id !== "done" && items.some((e) => stageInfo(e.id, c.id).late);
+    return `<div class="col"><div class="col-h"><span>${c.e}</span>${c.n}<span class="n ${late ? "late" : ""}">${byCol[c.id].length}</span></div>
+      ${items.map((e) => kanbanCard(e, c.id)).join("") || `<div class="col-empty">пусто</div>`}${more}</div>`;
+  }).join("")}</div>
+  <div class="muted small" style="margin:0 4px">Выпуск стоит в колонке этапа, который ещё не закрыт. ⏳ — ждёт предыдущий этап.</div>`;
   return html;
 }
 
@@ -516,7 +702,7 @@ function viewCalendar() {
     const { pubs, dls } = dayEvents(d);
     const cls = ["day", d.slice(0, 7) !== ui.month && "out", d === S.today && "today", d === ui.day && "sel"].filter(Boolean).join(" ");
     const ev = pubs.slice(0, 4).map((e) => episodeDone(e.id) ? "✅" : esc(proj(e.project_id).emoji)).join("") + (pubs.length > 4 ? "…" : "");
-    const dots = dls.slice(0, 8).map((g) => `<i class="${g.open === 0 ? "ok" : d < S.today ? "late" : ""}"></i>`).join("");
+    const dots = dls.slice(0, 8).map((g) => `<i class="${g.open === 0 ? "ok" : d < S.today ? "late" : ""}" style="${g.open === 0 || d < S.today ? "" : "background:" + pcolor(proj(ep(g.eid).project_id))}"></i>`).join("");
     cells += `<div class="${cls}" data-act="day" data-d="${d}"><span class="n">${Number(d.slice(8))}</span><span class="ev">${ev}</span><span class="dl">${dots}</span></div>`;
   }
   let html = projectChips() + `<div class="cal-wrap"><div>`;
@@ -529,7 +715,7 @@ function viewCalendar() {
   if (!pubs.length && !dls.length) html += `<div class="card muted">Ничего не запланировано</div>`;
   for (const e of pubs) {
     const p = proj(e.project_id);
-    html += `<div class="card clickable row" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>📤 Выход</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">«${esc(e.title)}» · ${projChannels(p.id).length} каналов</div></div>${episodeDone(e.id) ? `<span class="badge ok">готово</span>` : ""}</div>`;
+    html += `<div class="card clickable row pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>📤 Выход</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">«${esc(e.title)}» · ${projChannels(p.id).length} каналов</div></div>${episodeDone(e.id) ? `<span class="badge ok">готово</span>` : ""}</div>`;
   }
   for (const g of dls) {
     const e = ep(g.eid), p = proj(e.project_id);
@@ -697,7 +883,7 @@ function viewSettings() {
       const r = S.roles.find((x) => x.project_id === p.id && x.stage === st);
       return `${META[st].e} ${esc((mem(r && r.member_id) || { name: "—" }).name)}`;
     }).join(" · ");
-    html += `<div class="card ${admin ? "clickable" : ""}" ${admin ? `data-act="edit-project" data-id="${p.id}"` : ""}>
+    html += `<div class="card pc-stripe ${admin ? "clickable" : ""}" style="${pc(p)}" ${admin ? `data-act="edit-project" data-id="${p.id}"` : ""}>
       <div class="row"><div class="grow"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted">${chs.map((c) => flag(c.lang) + " " + esc(c.lang.toUpperCase())).join("  ") || "нет каналов"}</div>
       <div class="muted">${roles}</div>
       <div class="muted">${p.drive_folder_id ? "📁 Диск ✅" : "📁 Диск: папка не задана"} · Темы: ${topicStatus(p)}</div></div>${admin ? "›" : ""}</div></div>`;
@@ -725,19 +911,73 @@ function viewSettings() {
 }
 
 // ---------- шторка ----------
-function openSheet(renderFn) {
-  ui.sheet = { render: () => { document.getElementById("sheet").innerHTML = `<div class="grip"></div>` + renderFn(); } };
+/** native — функция, которая возвращает кнопки внизу экрана Telegram для этой шторки: { main, second }. */
+function openSheet(renderFn, native) {
+  ui.sheet = { render: () => { document.getElementById("sheet").innerHTML = `<div class="grip"></div>` + renderFn(); }, native };
   ui.sheet.render();
   document.getElementById("sheet").classList.add("open");
   document.getElementById("sheet-bg").classList.add("open");
   document.getElementById("sheet").scrollTop = 0;
   if (tg && tg.BackButton) tg.BackButton.show();
+  syncNative();
 }
 function closeSheet() {
   ui.sheet = null;
   document.getElementById("sheet").classList.remove("open");
   document.getElementById("sheet-bg").classList.remove("open");
   if (tg && tg.BackButton) tg.BackButton.hide();
+  syncNative();
+}
+
+// ---------- кнопки внизу экрана Telegram (MainButton / SecondaryButton) ----------
+let nativeNow = { main: null, second: null };
+const hasMain = () => !!(tg && tg.MainButton && (tg.initData || FAKE_NATIVE));
+const hasSecond = () => !!(tg && tg.SecondaryButton && (tg.initData || FAKE_NATIVE));
+
+function setNative(main, second) {
+  nativeNow = { main: main || null, second: second || null };
+  try {
+    if (hasMain()) { if (main) tg.MainButton.setParams({ text: main.text, is_visible: true, is_active: true }); else tg.MainButton.hide(); }
+    if (hasSecond()) { if (second) tg.SecondaryButton.setParams({ text: second.text, is_visible: true, position: "left" }); else tg.SecondaryButton.hide(); }
+  } catch (_) {}
+}
+
+/** Какие кнопки нужны сейчас: у открытой шторки — свои, на «Сейчас» — для главной задачи. */
+function syncNative() {
+  if (!S) return;
+  if (ui.sheet) {
+    const n = ui.sheet.native ? ui.sheet.native() : null;
+    return setNative(n && n.main, n && n.second);
+  }
+  const g = ui.tab === "my" ? ui.hero : null;
+  if (!g) return setNative(null, null);
+  const e = ep(g.eid);
+  const single = g.info.total === 1 && !g.info.ts[0].channel_id;
+  const ids = g.activeMine.map((t) => t.id);
+  const main = ids.length && (single || ids.length > 1)
+    ? { text: ids.length > 1 ? `✅ Все ${ids.length} готовы` : `✅ ${META[g.stage].n} ${e.code} — готово`, run: () => act("tasks.done", { ids, done: true }, "✅ Отмечено") }
+    : null;
+  const second = e.drive_folder_id ? { text: "📁 Папка", run: () => openUrl(folderLink(e.drive_folder_id)) } : null;
+  setNative(main || second, main ? second : null);
+}
+
+/** Для шторки выпуска: «готово» по моему открытому этапу и папка. */
+function episodeNative(id) {
+  return () => {
+    const e = ep(id);
+    if (!e) return null;
+    const mine = epTasks(id).filter((t) => t.assignee_id === S.me.tg_id && isActive(t));
+    const st = mine[0] && mine[0].stage;
+    const ids = mine.filter((t) => t.stage === st).map((t) => t.id);
+    const main = ids.length ? { text: ids.length > 1 ? `✅ ${META[st].n}: все ${ids.length} готовы` : `✅ ${META[st].n} — готово`, run: () => act("tasks.done", { ids, done: true }, "✅ Отмечено") } : null;
+    const second = e.drive_folder_id ? { text: "📁 Папка", run: () => openUrl(folderLink(e.drive_folder_id)) } : null;
+    return { main: main || second, second: main ? second : null };
+  };
+}
+
+function openUrl(url) {
+  if (tg && tg.openLink && tg.initData) tg.openLink(url);
+  else window.open(url, "_blank");
 }
 
 function memberOptions(selected, emptyLabel = "— никто") {
@@ -750,8 +990,9 @@ function episodeSheet(id) {
     if (!e) { closeSheet(); return ""; }
     const p = proj(e.project_id);
     const links = S.links.filter((l) => l.episode_id === id);
-    let html = `<div class="sheet-title"><b>${esc(p.emoji)} ${esc(p.name)} · ${esc(e.code)}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
-      ${e.drive_folder_id ? `<a class="btn block" style="display:block;text-align:center;margin-bottom:8px" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Открыть папку на Диске</a>
+    let html = `<div class="sheet-title" style="${pc(p)}"><span class="pdot"></span><b>${esc(p.emoji)} ${esc(p.name)} · ${esc(e.code)}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+      ${progressBars(e.id)}<div style="height:10px"></div>
+      ${e.drive_folder_id ? `<a class="btn block dup-second" style="display:block;text-align:center;margin-bottom:8px" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Открыть папку на Диске</a>
         <div class="muted small" style="margin:-2px 4px 10px">Внутри: 1_Сценарий · 2_Озвучка · 3_Готовое видео. Кладите файлы — этапы отметятся сами.</div>` : ""}
       <div class="card">
         <label class="f"><span>Название</span><input class="inp" data-field="title" value="${esc(e.title)}"></label>
@@ -795,7 +1036,7 @@ function newEpisodeSheet(state) {
       <label class="f"><span>Дата выхода</span><input class="inp" type="date" id="ne-date" value="${state.date || ""}"></label></div>
       <div class="muted small">${p.drive_folder_id ? `📁 На Диске появится папка «${esc(state.codeHint || "…")} ${esc(state.title || "Название")}» с подпапками 1_Сценарий, 2_Озвучка, 3_Готовое видео.<br>` : ""}Сроки — по настройкам проекта: сценарий за ${p.script_offset} дн. до выхода, озвучка в день сценария, монтаж за ${p.edit_offset} дн.</div>
     </div>
-    <button class="btn block" data-act="create-episode">Создать</button>`;
+    <button class="btn block dup-main" data-act="create-episode">Создать</button>`;
   };
 }
 
@@ -813,7 +1054,7 @@ function nextCode(pid) {
 async function openNewEpisode() {
   const pid = ui.project !== "all" ? Number(ui.project) : S.projects[0].id;
   const state = { project_id: pid, codeHint: nextCode(pid), date: "" };
-  openSheet(newEpisodeSheet(state));
+  openSheet(newEpisodeSheet(state), () => ({ main: { text: "Создать выпуск", run: () => handlers["create-episode"]() } }));
   ui.newEp = state;
   await suggestDate(state);
 }
@@ -845,6 +1086,7 @@ function projectSheet(draft) {
     <div class="card">
       <div class="row" style="gap:8px"><label class="f" style="width:72px"><span>Иконка</span><input class="inp" data-pf="emoji" value="${esc(draft.emoji)}" maxlength="4"></label>
       <label class="f grow"><span>Название</span><input class="inp" data-pf="name" value="${esc(draft.name)}" placeholder="Скрытая Физика"></label></div>
+      <label class="f"><span>Цвет проекта — полоска на карточках и точки в календаре</span><div class="swatches">${PALETTE.map((c) => `<button class="swatch ${(draft.color || draft.autoColor) === c ? "on" : ""}" style="--pc:${c}" data-act="pick-color" data-c="${c}" aria-label="цвет ${c}"></button>`).join("")}</div></label>
       <label class="f"><span>Папка проекта на Google Диске (ссылка)</span><input class="inp" data-pf="drive_folder" value="${esc(draft.drive_folder)}" placeholder="https://drive.google.com/drive/folders/…"></label>
       <label class="f"><span>Выпуск каждые N дней (дата выхода нового выпуска)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
       <label class="f"><span>Озвучка: через сколько дней после сценария (0 — в тот же день; пусто — по дате выхода)</span><input class="inp" type="number" min="0" data-pf="voice_days" value="${draft.voice_days ?? ""}"></label>
@@ -861,7 +1103,7 @@ function projectSheet(draft) {
         <button class="icon-btn" data-act="ch-del" data-i="${i}">✕</button></div>`).join("")}
       <button class="btn ghost sm" data-act="ch-add">+ язык</button>
       ${isNew ? "" : `<div class="muted small" style="margin-top:6px">Удаление языка удалит его задачи во всех выпусках.</div>`}</div>
-    <button class="btn block" data-act="save-project">Сохранить</button>
+    <button class="btn block dup-main" data-act="save-project">Сохранить</button>
     ${isNew ? "" : `<button class="btn danger block" style="margin-top:8px" data-act="archive-project" data-id="${draft.id}">Архивировать проект</button>`}`;
   };
 }
@@ -884,8 +1126,9 @@ function openProject(id) {
     const fallback = S.roles.find((x) => x.stage === s);
     draft.roles[s] = r ? r.member_id : !p && fallback ? fallback.member_id : null;
   }
+  draft.autoColor = p ? pcolor(p) : PALETTE[S.projects.length % PALETTE.length];
   ui.draft = draft;
-  openSheet(projectSheet(draft));
+  openSheet(projectSheet(draft), () => ({ main: { text: draft.id ? "Сохранить" : "Создать проект", run: () => handlers["save-project"]() } }));
   if (!p && S.drive && S.drive.enabled) {
     ui.driveFolders = null;
     api("drive.folders").then((r) => { ui.driveFolders = r.folders || []; if (ui.draft === draft) ui.sheet.render(); })
@@ -950,7 +1193,10 @@ const handlers = {
     render();
   },
   "day": (el) => { ui.day = el.dataset.d; haptic("light"); render(); },
-  "open-episode": (el) => openSheet(episodeSheet(Number(el.dataset.id))),
+  "open-episode": (el) => openSheet(episodeSheet(Number(el.dataset.id)), episodeNative(Number(el.dataset.id))),
+  "ep-view": (el) => { ui.epView = el.dataset.v; store("epView", ui.epView); render(); },
+  "toggle-waiting": () => { ui.showWaiting = !ui.showWaiting; render(); },
+  "pick-color": (el) => { readProjectForm(); ui.draft.color = el.dataset.c; haptic("light"); ui.sheet.render(); },
   "close-sheet": () => closeSheet(),
   "new-episode": () => openNewEpisode(),
   "done": (el) => act("tasks.done", { ids: el.dataset.ids.split(",").map(Number), done: true }, "✅ Отмечено"),
@@ -969,7 +1215,7 @@ const handlers = {
     if (!url) return toast("Вставь ссылку");
     await act("link.add", { episode_id: Number(el.dataset.id), url, title: document.getElementById("link-title").value.trim(), stage: document.getElementById("link-stage").value }, "🔗 Добавлено");
   },
-  "open-link": (el, ev) => { ev.preventDefault(); if (tg && tg.openLink && tg.initData) tg.openLink(el.href); else window.open(el.href, "_blank"); },
+  "open-link": (el, ev) => { ev.preventDefault(); openUrl(el.href); },
   "del-link": async (el) => { if (await confirmBox("Удалить ссылку?")) act("link.delete", { id: Number(el.dataset.id) }); },
   "del-episode": async (el) => {
     if (await confirmBox("Удалить выпуск со всеми задачами? Посты в группе тоже удалятся. Пустую папку на Диске бот уберёт в корзину, папку с файлами — оставит.")) {
@@ -987,7 +1233,7 @@ const handlers = {
       code: document.getElementById("ne-code").value.trim() || undefined,
       publish_date: document.getElementById("ne-date").value || undefined,
     }, "🎬 Выпуск создан: папка на Диске и пост в группе");
-    if (r) openSheet(episodeSheet(r.id));
+    if (r) openSheet(episodeSheet(r.id), episodeNative(r.id));
   },
   "edit-project": (el) => openProject(Number(el.dataset.id)),
   "ch-add": () => { readProjectForm(); ui.draft.channels.push({ lang: "", name: "", youtube_url: "" }); ui.sheet.render(); },
@@ -997,7 +1243,7 @@ const handlers = {
     const d = ui.draft;
     if (!d.name.trim()) return toast("Нужно название");
     const channels = d.channels.filter((c) => c.lang).map((c) => ({ id: c.id, lang: c.lang, name: c.name || null, youtube_url: c.youtube_url || null }));
-    const r = await act("project.save", { ...d, channels }, d.id ? "Сохранено" : "Проект создан");
+    const r = await act("project.save", { ...d, color: d.color || d.autoColor, channels }, d.id ? "Сохранено" : "Проект создан");
     if (!r) return;
     if (!d.id && r.id) openProject(r.id); // сразу показать темы и каналы нового проекта
     else closeSheet();
@@ -1034,8 +1280,8 @@ const handlers = {
       return `<div class="sheet-title"><b>Имя в боте</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
         <div class="card"><label class="f"><span>Как бот называет ${m.username ? "@" + esc(m.username) : "участника"} в постах и напоминаниях</span>
         <input class="inp" id="rn-name" value="${esc(m.name)}" maxlength="40" enterkeyhint="done"></label></div>
-        <button class="btn block" data-act="rename-save" data-id="${id}">Сохранить</button>`;
-    });
+        <button class="btn block dup-main" data-act="rename-save" data-id="${id}">Сохранить</button>`;
+    }, () => ({ main: { text: "Сохранить", run: () => handlers["rename-save"]({ dataset: { id } }) } }));
   },
   "rename-save": async (el) => {
     const name = document.getElementById("rn-name").value.trim();
@@ -1100,6 +1346,11 @@ async function start() {
     tg.expand();
     if (tg.initData) document.documentElement.classList.add("tg");
     if (tg.BackButton) tg.BackButton.onClick(closeSheet);
+    // кнопки внизу экрана Telegram: один обработчик, действие — по текущему экрану
+    if (hasMain()) { tg.MainButton.onClick(() => { haptic("light"); nativeNow.main && nativeNow.main.run(); }); document.documentElement.classList.add("has-main"); }
+    if (hasSecond()) { tg.SecondaryButton.onClick(() => nativeNow.second && nativeNow.second.run()); document.documentElement.classList.add("has-second"); }
+    // ⚙️ в меню Mini App открывает настройки
+    if (tg.SettingsButton && tg.initData) { try { tg.SettingsButton.show(); tg.SettingsButton.onClick(() => { closeSheet(); ui.tab = "settings"; store("tab", "settings"); render(); }); } catch (_) {} }
     const since = (v) => tg.isVersionAtLeast && tg.isVersionAtLeast(v);
     try {
       // iOS/Android: свайп вниз по списку не должен сворачивать приложение
@@ -1122,7 +1373,33 @@ async function start() {
   }
   const sp = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || qs.get("startapp") || "";
   const m = sp.match(/^ep_(\d+)$/);
-  if (m && ep(Number(m[1]))) openSheet(episodeSheet(Number(m[1])));
+  if (m && ep(Number(m[1]))) openSheet(episodeSheet(Number(m[1])), episodeNative(Number(m[1])));
+}
+
+if (FAKE_NATIVE) {
+  // макет нижней панели Telegram: Main справа, Secondary слева
+  const bar = document.createElement("div");
+  bar.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:8px;padding:8px 12px 14px;background:var(--bg2);border-top:1px solid var(--sep)";
+  document.body.appendChild(bar);
+  document.body.style.paddingBottom = "140px";
+  document.querySelector("nav").style.bottom = "64px";
+  const mk = (id) => {
+    const b = document.createElement("button");
+    b.id = id; b.className = "btn"; b.style.cssText = "flex:1;display:none;padding:13px"; bar.appendChild(b);
+    let cb = null, params = {};
+    return {
+      setParams(p) { Object.assign(params, p); b.textContent = params.text || ""; b.style.display = params.is_visible ? "block" : "none"; if (id === "fake-second") b.classList.add("ghost"); },
+      hide() { params.is_visible = false; b.style.display = "none"; },
+      onClick(fn) { cb = fn; b.onclick = () => cb && cb(); },
+    };
+  };
+  const second = mk("fake-second"), main = mk("fake-main");
+  // у настоящего Telegram.WebApp эти свойства только для чтения — объявляем свои поверх
+  const fake = Object.create(tg || {});
+  for (const [k, v] of Object.entries({ MainButton: main, SecondaryButton: second, initData: "", isVersionAtLeast: () => false })) {
+    Object.defineProperty(fake, k, { value: v });
+  }
+  tg = fake;
 }
 
 if (MOCK) {
