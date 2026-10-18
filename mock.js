@@ -81,7 +81,7 @@
       case "project.save": {
         let p = st.projects.find((x) => x.id === b.id);
         if (!p) { p = { id: Math.max(...st.projects.map((x) => x.id)) + 1, thread_id: null }; st.projects.push(p); }
-        for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days"]) p[k] = b[k];
+        for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days", "color"]) p[k] = b[k];
         p.drive_folder_id = (String(b.drive_folder || "").match(/folders\/([\w-]+)/) || [])[1] || null;
         st.channels = st.channels.filter((c) => c.project_id !== p.id || b.channels.some((x) => x.id === c.id));
         b.channels.forEach((c, i) => { const ex = st.channels.find((x) => x.id === c.id); if (ex) Object.assign(ex, c, { sort: i }); else st.channels.push({ ...c, id: cid++, project_id: p.id, sort: i }); });
