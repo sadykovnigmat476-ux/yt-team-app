@@ -998,7 +998,7 @@ function episodeSheet(id) {
         <label class="f"><span>Название</span><input class="inp" data-field="title" value="${esc(e.title)}"></label>
         <div class="grid2"><label class="f"><span>Код</span><input class="inp" data-field="code" value="${esc(e.code)}"></label>
         <label class="f"><span>Дата выхода</span><input class="inp" type="date" data-field="publish_date" value="${e.publish_date}"></label></div>
-        <div class="muted small">Сроки этапов пересчитаются от даты выхода.</div>
+        <div class="muted small">Сроки этапов пересчитаются от даты выхода. Срок выкладки и дата выхода — одно и то же: поменяешь одно, поменяется и другое.</div>
       </div>`;
     for (const st of STAGES) {
       const i = stageInfo(id, st);
