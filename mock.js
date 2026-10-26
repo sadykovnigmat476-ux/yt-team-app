@@ -39,30 +39,95 @@
       { project_id: p.id, stage: "edit", member_id: 1 }, { project_id: p.id, stage: "upload", member_id: 2 });
   }
 
-  function createEpisode(b) {
-    const p = st.projects.find((x) => x.id === b.project_id);
-    const codes = st.episodes.filter((e) => e.project_id === p.id).map((e) => +(e.code.match(/\d+/) || [0])[0]);
-    const e = { id: eid++, project_id: p.id, drive_folder_id: "demo" + eid, code: b.code || "S" + String(Math.max(0, ...codes) + 1).padStart(2, "0"), title: b.title, publish_date: b.publish_date || add(today, 7), notes: null };
-    st.episodes.push(e);
+  // ---- зеркало серверных правил (domain.ts): сроки со сжатием, перенос, коды ----
+  const proj = (id) => st.projects.find((x) => x.id === id);
+  const dueFor = (p, s, pub) => add(pub, -p[s + "_offset"]);
+  /** scheduleFor: срок = max(по оффсету, сегодня), но не позже даты выхода; порядок этапов сохраняется. */
+  function scheduleFor(p, pub) {
+    const out = {};
+    let prev = null;
     for (const s of STAGES) {
-      const due = add(e.publish_date, -p[s + "_offset"]);
-      const assignee_id = (st.roles.find((r) => r.project_id === p.id && r.stage === s) || {}).member_id ?? null;
+      let d = dueFor(p, s, pub);
+      if (d < today) d = today;
+      if (d > pub) d = pub;
+      if (prev && d < prev) d = prev;
+      out[s] = d;
+      prev = d;
+    }
+    return out;
+  }
+  const isCompressed = (p, pub) => dueFor(p, "script", pub) < today;
+  const roleOf = (pid, s) => (st.roles.find((r) => r.project_id === pid && r.stage === s) || {}).member_id ?? null;
+  // как normCode на сервере: «11», «s11», «S 11» → «S11» (подсказка номера у проекта без S приходит числом)
+  const normCode = (c) => { const t = String(c).trim().toUpperCase(); const m = t.match(/^[SЅ]?\s*(\d{1,3})$/); return m ? "S" + m[1].padStart(2, "0") : t; };
+  // как nextEpisodeCode на сервере: номера ничейных папок Диска заняты, кроме той, что возьмёт выпуск (exceptFolderId)
+  const nextCode = (p, exceptFolderId) => {
+    const codes = st.episodes.filter((e) => e.project_id === p.id).map((e) => +(e.code.match(/\d+/) || [0])[0]);
+    for (const o of orphans) {
+      if (o.project_id !== p.id || o.id === exceptFolderId) continue;
+      const m = o.name.match(/^\s*[SЅsѕ]?\s*(\d{1,3})(?!\d)/);
+      if (m) codes.push(+m[1]);
+    }
+    return "S" + String(Math.max(0, ...codes) + 1).padStart(2, "0");
+  };
+  function assertCodeFree(p, code, exceptId) {
+    if (st.episodes.some((e) => e.project_id === p.id && e.code === code && e.id !== exceptId)) throw new Error("Код " + code + " уже занят");
+  }
+  // titleSimilarity: доля общих слов (без кода в начале названия папки)
+  const words = (t) => new Set(String(t).toLowerCase().replace(/^s?\d+[\s_.-]+/i, "").split(/[^a-zа-яё0-9]+/i).filter(Boolean));
+  const similarity = (a, b) => { const x = words(a), y = words(b); if (!x.size || !y.size) return 0; let n = 0; x.forEach((w) => y.has(w) && n++); return n / (x.size + y.size - n); };
+  // ничейные папки на «Диске»: есть папка проекта, под неё ещё нет выпуска
+  let orphans = [{ project_id: 1, id: "orphan-faraday", name: "Фарадей и первый электромотор" }];
+
+  /** raw — как у выпусков, созданных давно: сроки по оффсетам без сжатия (демо-просрочка). */
+  function createEpisode(b, raw) {
+    const p = proj(b.project_id);
+    const code = b.code ? normCode(b.code) : nextCode(p, b.drive_folder_id);
+    assertCodeFree(p, code);
+    const orphan = b.drive_folder_id && orphans.find((o) => o.id === b.drive_folder_id);
+    if (orphan) orphans = orphans.filter((o) => o !== orphan);
+    const e = { id: eid++, project_id: p.id, drive_folder_id: b.drive_folder_id || "demo" + eid, code, title: b.title, publish_date: b.publish_date || add(today, 7), notes: null };
+    st.episodes.push(e);
+    const sc = raw ? Object.fromEntries(STAGES.map((s) => [s, dueFor(p, s, e.publish_date)])) : scheduleFor(p, e.publish_date);
+    for (const s of STAGES) {
+      const due = sc[s];
+      const assignee_id = roleOf(p.id, s);
       if (s !== "upload") st.tasks.push({ id: tid++, episode_id: e.id, stage: s, channel_id: null, assignee_id, due_date: due, done_at: null });
       else for (const c of st.channels.filter((c) => c.project_id === p.id)) st.tasks.push({ id: tid++, episode_id: e.id, stage: s, channel_id: c.id, assignee_id, due_date: due, done_at: null });
     }
     return e;
   }
+  /** rescheduleEpisode: единственный путь переноса; закрытые этапы не трогает, озвучку по voice_days после сценария — тоже. */
+  function reschedule(e, pub) {
+    const p = proj(e.project_id);
+    e.publish_date = pub;
+    const sc = scheduleFor(p, pub);
+    const scriptClosed = st.tasks.filter((t) => t.episode_id === e.id && t.stage === "script").every((t) => t.done_at);
+    for (const t of st.tasks.filter((t) => t.episode_id === e.id && !t.done_at)) {
+      if (t.stage === "voice" && p.voice_days != null && scriptClosed) continue;
+      t.due_date = sc[t.stage];
+    }
+  }
+  /** onUnlocked: сценарий закрыт → срок озвучки = сегодня + voice_days. */
+  function afterDone(eIds) {
+    for (const id of eIds) {
+      const e = st.episodes.find((x) => x.id === id), p = e && proj(e.project_id);
+      if (!p || p.voice_days == null) continue;
+      if (!st.tasks.filter((t) => t.episode_id === id && t.stage === "script").every((t) => t.done_at)) continue;
+      st.tasks.filter((t) => t.episode_id === id && t.stage === "voice" && !t.done_at).forEach((t) => (t.due_date = add(today, p.voice_days)));
+    }
+  }
   const done = (eId, stage, n) => st.tasks.filter((t) => t.episode_id === eId && t.stage === stage).slice(0, n ?? 99).forEach((t) => (t.done_at = "x"));
 
-  const e1 = createEpisode({ project_id: 1, title: "Как Эратосфен измерил Землю палкой и тенью", publish_date: add(today, 3) });
+  const e1 = createEpisode({ project_id: 1, title: "Как Эратосфен измерил Землю палкой и тенью", publish_date: add(today, 3) }, true);
   done(e1.id, "script");
   st.links.push({ id: lid++, episode_id: e1.id, stage: "script", url: "https://drive.google.com/drive/folders/demo", title: "Сценарий" });
-  const e2 = createEpisode({ project_id: 2, title: "Почему римляне строили лагерь каждый вечер", publish_date: add(today, 6) });
-  const e3 = createEpisode({ project_id: 3, title: "Ровно 5 мест, где можно припарковаться в космосе", publish_date: add(today, 1) });
+  const e2 = createEpisode({ project_id: 2, title: "Почему римляне строили лагерь каждый вечер", publish_date: add(today, 6) }, true);
+  const e3 = createEpisode({ project_id: 3, title: "Ровно 5 мест, где можно припарковаться в космосе", publish_date: add(today, 1) }, true);
   done(e3.id, "script"); done(e3.id, "voice"); done(e3.id, "edit"); done(e3.id, "upload", 2);
-  const e4 = createEpisode({ project_id: 1, title: "Ньютон и яблоко: что было на самом деле", publish_date: add(today, -2) });
+  const e4 = createEpisode({ project_id: 1, title: "Ньютон и яблоко: что было на самом деле", publish_date: add(today, -2) }, true);
   for (const s of STAGES) done(e4.id, s);
-  createEpisode({ project_id: 2, title: "Фаланга против легиона", publish_date: add(today, 13) });
+  createEpisode({ project_id: 2, title: "Фаланга против легиона", publish_date: add(today, 13) }, true);
   void e2;
 
   const clone = (x) => JSON.parse(JSON.stringify(x));
@@ -70,21 +135,76 @@
     await new Promise((r) => setTimeout(r, 120));
     switch (action) {
       case "state": return clone({ ...st, today });
-      case "episode.suggest": return { publish_date: add(today, 7), code: b.project_id === 3 ? "11" : "S0" + (st.episodes.filter((e) => e.project_id === b.project_id).length + 1), drive: true };
+      case "episode.suggest": {
+        const p = proj(b.project_id);
+        const last = st.episodes.filter((e) => e.project_id === p.id).map((e) => e.publish_date).sort().pop();
+        const early = add(today, p.script_offset);
+        const date = last ? [add(last, p.cadence_days), early].sort().pop() : early;
+        const pub = b.publish_date || date;
+        // ничейная папка с похожим названием: её номер не занят, выпуск возьмёт её, а не создаст новую
+        const folder = b.title && orphans.find((o) => o.project_id === p.id && similarity(b.title, o.name) >= 0.6);
+        return {
+          publish_date: date, code: p.id === 3 ? "11" : nextCode(p, folder && folder.id), drive: !!p.drive_folder_id,
+          ...(folder ? { folder: { id: folder.id, name: folder.name } } : {}), compressed: isCompressed(p, pub),
+        };
+      }
       case "episode.create": return { id: createEpisode(b).id };
-      case "episode.update": Object.assign(st.episodes.find((e) => e.id === b.id), Object.fromEntries(Object.entries(b).filter(([k]) => k !== "action" && k !== "id"))); return {};
+      case "episode.update": {
+        const e = st.episodes.find((x) => x.id === b.id);
+        if (b.code != null) { const code = normCode(b.code); assertCodeFree(proj(e.project_id), code, e.id); e.code = code; }
+        if (b.title != null) e.title = b.title;
+        if (b.notes != null) e.notes = b.notes;
+        if (b.publish_date != null) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(b.publish_date)) throw new Error("Неверная дата");
+          if (b.publish_date !== e.publish_date) reschedule(e, b.publish_date);
+        }
+        return {};
+      }
       case "episode.delete": st.episodes = st.episodes.filter((e) => e.id !== b.id); st.tasks = st.tasks.filter((t) => t.episode_id !== b.id); return { folder: "trashed" };
-      case "tasks.done": st.tasks.filter((t) => b.ids.includes(t.id)).forEach((t) => (t.done_at = b.done ? "x" : null)); return { changed: b.ids.length };
-      case "tasks.assign": st.tasks.filter((t) => b.ids.includes(t.id)).forEach((t) => { if ("assignee_id" in b) t.assignee_id = b.assignee_id; if ("due_date" in b) t.due_date = b.due_date; }); return {};
+      case "tasks.done": {
+        // как на сервере: меняются только задачи не в нужном состоянии — уже отмеченные другим не считаются
+        const ts = st.tasks.filter((t) => b.ids.includes(t.id) && !!t.done_at !== !!b.done);
+        ts.forEach((t) => (t.done_at = b.done ? "x" : null));
+        if (b.done && ts.length) afterDone([...new Set(ts.map((t) => t.episode_id))]);
+        return { changed: ts.length, ids: ts.map((t) => t.id) };
+      }
+      case "tasks.assign": {
+        const ts = st.tasks.filter((t) => b.ids.includes(t.id));
+        ts.forEach((t) => { if ("assignee_id" in b) t.assignee_id = b.assignee_id; if ("due_date" in b) t.due_date = b.due_date; });
+        // срок «Выкладки» = дата выхода: двигаем выпуск общим путём, остальные открытые этапы пересчитываются
+        if (b.due_date) {
+          for (const id of [...new Set(ts.filter((t) => t.stage === "upload").map((t) => t.episode_id))]) {
+            const e = st.episodes.find((x) => x.id === id);
+            reschedule(e, add(b.due_date, proj(e.project_id).upload_offset));
+          }
+        }
+        return {};
+      }
       case "link.add": st.links.push({ id: lid++, episode_id: b.episode_id, stage: b.stage || null, url: b.url, title: b.title || null }); return {};
       case "link.delete": st.links = st.links.filter((l) => l.id !== b.id); return {};
       case "project.save": {
+        // серверные проверки: пустое или дробное число — 400 с понятным полем
+        const int = (v, min) => typeof v === "number" && Number.isInteger(v) && v >= min;
+        if (!int(b.cadence_days, 1)) throw new Error("Выпуск каждые N дней — целое число от 1");
+        for (const s of STAGES) if (!int(b[s + "_offset"], 0)) throw new Error("Срок этапа «" + ({ script: "Сценарий", voice: "Озвучка", edit: "Монтаж", upload: "Выкладка" })[s] + "» — целое число от 0");
+        if (b.voice_days != null && !int(b.voice_days, 0)) throw new Error("Озвучка после сценария — целое число от 0 или пусто");
         let p = st.projects.find((x) => x.id === b.id);
         if (!p) { p = { id: Math.max(...st.projects.map((x) => x.id)) + 1, thread_id: null }; st.projects.push(p); }
         for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days", "color"]) p[k] = b[k];
         p.drive_folder_id = (String(b.drive_folder || "").match(/folders\/([\w-]+)/) || [])[1] || null;
-        st.channels = st.channels.filter((c) => c.project_id !== p.id || b.channels.some((x) => x.id === c.id));
-        b.channels.forEach((c, i) => { const ex = st.channels.find((x) => x.id === c.id); if (ex) Object.assign(ex, c, { sort: i }); else st.channels.push({ ...c, id: cid++, project_id: p.id, sort: i }); });
+        const removed = st.channels.filter((c) => c.project_id === p.id && !b.channels.some((x) => x.id === c.id)).map((c) => c.id);
+        st.channels = st.channels.filter((c) => !removed.includes(c.id));
+        st.tasks = st.tasks.filter((t) => !removed.includes(t.channel_id)); // каскад: задачи удалённого канала уходят вместе с ним
+        const fresh = [];
+        b.channels.forEach((c, i) => { const ex = st.channels.find((x) => x.id === c.id); if (ex) Object.assign(ex, c, { sort: i }); else { const nc = { ...c, id: cid++, project_id: p.id, sort: i }; st.channels.push(nc); fresh.push(nc); } });
+        // addChannelTasks: новый канал получает выкладку у всех выпусков, где она ещё не закрыта
+        for (const nc of fresh) {
+          for (const e of st.episodes.filter((x) => x.project_id === p.id)) {
+            const ups = st.tasks.filter((t) => t.episode_id === e.id && t.stage === "upload");
+            if (!ups.length || ups.every((t) => t.done_at)) continue;
+            st.tasks.push({ id: tid++, episode_id: e.id, stage: "upload", channel_id: nc.id, assignee_id: roleOf(p.id, "upload"), due_date: scheduleFor(p, e.publish_date).upload, done_at: null });
+          }
+        }
         for (const s of STAGES) { st.roles = st.roles.filter((r) => !(r.project_id === p.id && r.stage === s)); st.roles.push({ project_id: p.id, stage: s, member_id: b.roles[s] }); }
         return { id: p.id };
       }
@@ -146,7 +266,14 @@
         }
         return {};
       case "project.archive": st.projects = st.projects.filter((p) => p.id !== b.id); return {};
-      case "settings.save": Object.assign(st.settings, { timezone: b.timezone, morning_hour: b.morning_hour, evening_hour: b.evening_hour }); return {};
+      case "settings.save": {
+        const hour = (v) => Number.isInteger(v) && v >= 0 && v <= 23;
+        if (!hour(b.morning_hour) || !hour(b.evening_hour)) throw new Error("Час — число от 0 до 23");
+        if (b.morning_hour >= b.evening_hour) throw new Error("Утро должно быть раньше вечера");
+        try { new Intl.DateTimeFormat("ru", { timeZone: b.timezone }); } catch (_) { throw new Error("Неизвестный часовой пояс"); }
+        Object.assign(st.settings, { timezone: b.timezone, morning_hour: b.morning_hour, evening_hour: b.evening_hour });
+        return {};
+      }
       case "member.update": Object.assign(st.members.find((m) => m.tg_id === b.tg_id), { name: b.name }); return {};
       default: throw new Error("mock: " + action);
     }
