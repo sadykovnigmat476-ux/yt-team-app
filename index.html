@@ -32,8 +32,11 @@
     /* высота окна: Telegram отдаёт её сам (на Android меняется, когда открыта клавиатура) */
     --vh: var(--tg-viewport-height, 100vh);
   }
+  /* color-scheme: родные поля даты/списки и полосы прокрутки рисуются в цвет темы (в Telegram — по tg.colorScheme) */
+  :root { color-scheme: light; }
+  :root[data-scheme="dark"] { color-scheme: dark; }
   @media (prefers-color-scheme: dark) {
-    :root:not(.tg) { --bg: #17181c; --bg2: #0f1013; --card: #1f2127; --text: #f1f2f4; --hint: #8b919c; }
+    :root:not(.tg):not([data-scheme="light"]) { color-scheme: dark; --bg: #17181c; --bg2: #0f1013; --card: #1f2127; --text: #f1f2f4; --hint: #8b919c; }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg2); color: var(--text); font: 15px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -70,7 +73,7 @@
   .btn.danger { background: var(--danger-bg); color: var(--danger); }
   .btn.sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
   .btn.block { width: 100%; }
-  .btn:disabled { opacity: .5; }
+  .btn:disabled, .btn.is-busy { opacity: .5; pointer-events: none; }
   .icon-btn { border: 0; background: none; padding: 4px 6px; cursor: pointer; color: var(--hint); font-size: 16px; }
 
   .progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 8px; }
@@ -126,8 +129,17 @@
   .link-row { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-top: 1px solid var(--sep); }
   .link-row:first-child { border-top: 0; }
   .lang-row { display: grid; grid-template-columns: 64px 1fr 30px; gap: 6px; margin-bottom: 6px; }
-  .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: rgba(20,20,20,.9); color: #fff; padding: 8px 14px; border-radius: 10px; font-size: 14px; z-index: 50; display: none; max-width: 90vw; text-align: center; }
-  .toast.show { display: block; }
+  .toast { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; bottom: calc(90px + env(safe-area-inset-bottom)); background: rgba(20,20,20,.92); color: #fff; padding: 8px 14px; border-radius: 10px; font-size: 14px; z-index: 50; display: none; max-width: calc(100vw - 24px); text-align: center; }
+  .toast.show { display: flex; align-items: center; gap: 12px; }
+  .toast-undo { border: 0; background: rgba(255,255,255,.18); color: #fff; font-weight: 600; border-radius: 8px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+  .banner { display: flex; align-items: center; gap: 8px; background: var(--danger-bg); color: var(--danger); border-radius: 12px; padding: 9px 12px; margin: 0 0 10px; font-size: 14px; }
+  .note { border-radius: 10px; padding: 7px 10px; margin: 6px 0; font-size: 13px; background: var(--accent-bg); }
+  .note.warn { background: var(--warn-bg); }
+  .pgroup { margin-bottom: 4px; }
+  .ph { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--hint); margin: 8px 4px 5px; }
+  .onb-head { cursor: pointer; }
+  .day .dl i.wait { background: transparent; box-shadow: inset 0 0 0 1px var(--hint); }
+  .stripe-card { box-shadow: inset 4px 0 0 var(--pc, var(--accent)); }
   .loading { text-align: center; padding: 60px 16px; color: var(--hint); }
   .member { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--sep); }
   .member:first-child { border-top: 0; }
@@ -207,7 +219,7 @@
   .counter { display: flex; align-items: center; gap: 6px; background: var(--card); border-radius: 12px; padding: 7px 11px; font-size: 13px; color: var(--hint); }
   .counter b { font-size: 16px; color: var(--text); }
   .counter.bad b { color: var(--danger); }
-  .next-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: var(--card); border-radius: 12px; margin-bottom: 6px; cursor: pointer; }
+  .next-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px 11px 14px; background: var(--card); border-radius: 12px; margin-bottom: 6px; cursor: pointer; box-shadow: inset 4px 0 0 var(--pc, var(--accent)); }
   .next-row .t { flex: 1; min-width: 0; }
   .calm { text-align: center; padding: 26px 16px; }
   .calm .big { font-size: 46px; }
@@ -255,6 +267,10 @@ const qs = new URLSearchParams(location.search);
 const MOCK = qs.has("mock");
 const FAKE_NATIVE = MOCK && qs.has("native");
 const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || "";
+const FETCH_TIMEOUT_MS = 20000;
+const NO_NET = "Нет связи с сервером, попробуй ещё раз";
+// версия Telegram для макета ?native=1 (например &tgver=7.0 — проверить старый клиент без SecondaryButton)
+const FAKE_VER = Number(qs.get("tgver")) || 9;
 
 const STAGES = ["script", "voice", "edit", "upload"];
 const META = {
@@ -262,7 +278,6 @@ const META = {
   edit: { e: "🎞", n: "Монтаж" }, upload: { e: "📤", n: "Выкладка" },
 };
 const PREV = { script: null, voice: "script", edit: "voice", upload: "edit" };
-const FLAGS = { ru: "🇷🇺", en: "🇬🇧", es: "🇪🇸", de: "🇩🇪", fr: "🇫🇷", pt: "🇧🇷", it: "🇮🇹", tr: "🇹🇷", ar: "🇸🇦", hi: "🇮🇳", id: "🇮🇩", ja: "🇯🇵", ko: "🇰🇷", zh: "🇨🇳", uk: "🇺🇦", pl: "🇵🇱", uz: "🇺🇿", kk: "🇰🇿", vi: "🇻🇳", th: "🇹🇭", nl: "🇳🇱" };
 const WD = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
 const MON = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
 const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
@@ -282,7 +297,8 @@ let S = null;
 const ui = {
   tab: store("tab") || "my", project: store("project") || "all", showDone: false, month: null, day: null, sheet: null,
   statsDays: Number(store("statsDays")) || 30, stats: null, statsLoading: null, statsError: null,
-  epView: store("epView") || "board", showWaiting: false, hero: null,
+  epView: store("epView") || "board", showWaiting: true, hero: null,
+  nowAll: false, newEp: null, skipKeep: null,
 };
 
 function store(k, v) {
@@ -294,7 +310,8 @@ function store(k, v) {
 
 // ---------- утилиты ----------
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const flag = (l) => FLAGS[(l || "").toLowerCase()] || "🏳️";
+// язык — всегда кодом (RU), без флагов: флаг — это страна, а не язык, и на Windows он не рисуется
+const langTag = (l) => String(l || "?").toUpperCase();
 const dParse = (d) => new Date(d + "T00:00:00Z");
 const addDays = (d, n) => { const x = dParse(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 const weekday = (d) => (dParse(d).getUTCDay() + 6) % 7;
@@ -319,12 +336,23 @@ function dueBadge(d, done) {
   return `<span class="badge ${cls}">${n < 0 ? "⚠️ " : ""}${fmt(d)}</span>`;
 }
 const haptic = (t) => { try { tg && tg.HapticFeedback && (t === "light" ? tg.HapticFeedback.impactOccurred("light") : tg.HapticFeedback.notificationOccurred(t)); } catch (_) {} };
-function toast(msg) {
+/** Тост; {undo} добавляет кнопку «Отменить» на 5 секунд (undo — функция, возвращающая промис). */
+function toast(msg, opt = {}) {
   const el = document.getElementById("toast");
-  el.textContent = msg;
+  el.textContent = "";
+  const text = document.createElement("span");
+  text.textContent = msg;
+  el.append(text);
+  if (opt.undo) {
+    const b = document.createElement("button");
+    b.className = "toast-undo";
+    b.textContent = "Отменить";
+    b.onclick = () => { clearTimeout(toast.t); el.classList.remove("show"); opt.undo(); };
+    el.append(b);
+  }
   el.classList.add("show");
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => el.classList.remove("show"), 2600);
+  toast.t = setTimeout(() => el.classList.remove("show"), opt.undo ? 5000 : 2600);
 }
 function confirmBox(text) {
   return new Promise((res) => {
@@ -338,6 +366,37 @@ const ep = (id) => S.episodes.find((e) => e.id === id);
 const proj = (id) => S.projects.find((p) => p.id === id);
 const chan = (id) => S.channels.find((c) => c.id === id);
 const mem = (id) => S.members.find((m) => m.tg_id === id);
+
+/**
+ * Голова подписи выпуска «🔭 Скрытая Физика · S04» — зеркало episodeLabel на сервере (обычный текст, esc делает вызывающий).
+ * full добавляет «название»; short — для тесных мест: «🔭 S04».
+ */
+function epHead(e) {
+  const p = proj(e.project_id) || { emoji: "", name: "" };
+  return `${p.emoji} ${p.name} · ${e.code}`;
+}
+function epLabel(e, mode = "full") {
+  const p = proj(e.project_id) || { emoji: "", name: "" };
+  if (mode === "short") return `${p.emoji} ${e.code}`;
+  return epHead(e) + (e.title ? ` «${e.title}»` : "");
+}
+/** HTML-строка выпуска: жирная голова + название (для карточек и списков). */
+const epHtml = (e) => `<b>${esc(epHead(e))}</b> ${esc(e.title)}`;
+/** Для нижней кнопки Telegram: проект и код без названия — иначе кнопка не помещается. */
+function epBtn(e) {
+  const p = proj(e.project_id) || { emoji: "", name: "" };
+  return `${p.emoji} ${p.name} ${e.code}`;
+}
+/** Сжатый график: срок сценария уже в прошлом (зеркало isCompressed на сервере). */
+function isCompressedFor(p, publishDate) {
+  return !!publishDate && addDays(publishDate, -(p.script_offset || 0)) < S.today;
+}
+/** Подсказка про озвучку по настройке проекта (а не зашитое «в день сценария»). */
+function voiceHint(p) {
+  if (p.voice_days == null) return `озвучка за ${p.voice_offset} дн. до выхода`;
+  if (p.voice_days === 0) return "озвучка в день, когда придёт сценарий";
+  return `озвучка через ${p.voice_days} дн. после сценария`;
+}
 const epTasks = (id) => S.tasks.filter((t) => t.episode_id === id);
 const projChannels = (pid) => S.channels.filter((c) => c.project_id === pid).sort((a, b) => a.sort - b.sort);
 const chSort = (t) => (chan(t.channel_id) || { sort: -1 }).sort;
@@ -372,17 +431,32 @@ function episodeDone(eid) {
   return ts.length > 0 && ts.every((t) => t.done_at);
 }
 
+/** Один запрос к серверу: таймаут и русский текст вместо «Failed to fetch» / «AbortError». */
+async function rawFetch(url, action, body, timeoutMs = FETCH_TIMEOUT_MS) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-init-data": (tg && tg.initData) || "" },
+      body: JSON.stringify({ action, ...body }),
+      signal: ctl.signal,
+    });
+  } catch (_) {
+    throw new Error(NO_NET);
+  } finally {
+    clearTimeout(timer);
+  }
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json.error || `Сервер ответил ошибкой ${res.status}, попробуй ещё раз`);
+  return json;
+}
+
 async function api(action, body = {}) {
   if (MOCK) return window.MOCK_API(action, body);
   if (!API_URL) throw new Error("Не задан адрес API (config.js)");
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-init-data": (tg && tg.initData) || "" },
-    body: JSON.stringify({ action, ...body }),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `Ошибка ${res.status}`);
-  return json;
+  return rawFetch(API_URL, action, body);
 }
 
 async function load() {
@@ -392,22 +466,121 @@ async function load() {
   render();
 }
 
-async function act(action, body, msg) {
+// ---------- замок запросов ----------
+// Одновременно идёт один запрос-изменение. Повтор того же самого нажатия (двойной клик по «Готово» / MainButton)
+// отбрасывается, другое действие ждёт своей очереди — иначе второй клик закрывал уже следующий этап или делал второй выпуск.
+let busy = null;
+
+/** Кнопка и MainButton показывают, что запрос идёт; повторные нажатия в это время не проходят. */
+function setBusyUI(on, el) {
+  document.body.classList.toggle("busy", on);
+  if (el && el.classList) { el.classList.toggle("is-busy", on); if ("disabled" in el) el.disabled = on; }
+  try {
+    if (hasMain()) { if (on) tg.MainButton.showProgress(false); else tg.MainButton.hideProgress(); }
+  } catch (_) {}
+}
+
+/**
+ * Запрос-изменение → тост → перезагрузка. opts: el — нажатая кнопка (блокируется до ответа),
+ * undo — функция «Отменить» для тоста, commit — ключи полей data-keep, которые после успеха берутся с сервера, а не из набранного.
+ * Возвращает ответ ({} если пустой) или null при ошибке/отброшенном повторе.
+ */
+async function act(action, body, msg, opts = {}) {
+  const key = action + ":" + JSON.stringify(body);
+  while (busy) {
+    if (busy.key === key) return null;
+    await busy.done;
+  }
+  let release;
+  busy = { key, done: new Promise((r) => (release = r)) };
+  setBusyUI(true, opts.el);
+  ui.skipKeep = opts.commit ? new Set(opts.commit) : null;
   try {
     const r = await api(action, body);
     haptic("success");
-    if (msg) toast(msg);
     await load();
+    if (msg) toast(msg, opts.undo ? { undo: opts.undo } : {});
     return r || {};
   } catch (e) {
     haptic("error");
     toast(e.message);
     return null;
+  } finally {
+    ui.skipKeep = null;
+    busy = null;
+    setBusyUI(false, opts.el);
+    release();
   }
 }
 
+/**
+ * Отметить этапы готовыми с тостом «Отменить» (5 с). «Отменить» — только если отметил именно этот запрос
+ * (changed > 0), и снимает только задачи, которые он поменял: чужую отметку (Павел успел раньше) не трогаем.
+ */
+async function markDone(ids, el) {
+  const r = await act("tasks.done", { ids, done: true }, null, { el });
+  if (!r) return r;
+  if (r.changed > 0) {
+    const mine = Array.isArray(r.ids) && r.ids.length ? r.ids : ids;
+    const t = S.tasks.find((x) => x.id === mine[0]);
+    const e = t && ep(t.episode_id);
+    const msg = e ? `✅ ${META[t.stage].n} · ${epLabel(e)}` : "✅ Отмечено";
+    toast(msg, { undo: () => act("tasks.done", { ids: mine, done: false }, "Отметка снята") });
+  } else toast("Уже отмечено");
+  return r;
+}
+
 // ---------- рендер ----------
+// Перерисовка целиком сносит поля. Поля с data-keep="ключ" перед этим запоминаются (если их правили или в них курсор)
+// и возвращаются на место вместе с фокусом и выделением.
+const KEEP_SEL = "[data-keep],[data-pf],[data-role],[data-ch]";
+// у полей шторки проекта ключ выводится из data-pf / data-role / data-ch
+const keepKey = (el) => el.dataset.keep || (el.dataset.pf && "pf:" + el.dataset.pf) || (el.dataset.role && "role:" + el.dataset.role)
+  || (el.dataset.ch != null && el.dataset.k ? `ch:${el.dataset.ch}:${el.dataset.k}` : null);
+function snapKeep() {
+  const snap = { vals: {}, focus: null };
+  document.querySelectorAll(KEEP_SEL).forEach((el) => {
+    const k = keepKey(el);
+    let dirty;
+    if (el.type === "checkbox") dirty = el.checked !== el.defaultChecked;
+    else if (el.tagName === "SELECT") dirty = el.selectedIndex !== Math.max(0, [...el.options].findIndex((o) => o.defaultSelected));
+    else dirty = el.value !== el.defaultValue;
+    if (dirty) snap.vals[k] = el.type === "checkbox" ? el.checked : el.value;
+  });
+  const a = document.activeElement;
+  if (a && a.dataset && keepKey(a)) {
+    let s = null, e = null;
+    try { s = a.selectionStart; e = a.selectionEnd; } catch (_) {}
+    snap.focus = { k: keepKey(a), s, e };
+  }
+  return snap;
+}
+function restoreKeep(snap) {
+  const skip = ui.skipKeep;
+  document.querySelectorAll(KEEP_SEL).forEach((el) => {
+    const k = keepKey(el);
+    if (!(k in snap.vals) || (skip && skip.has(k))) return;
+    if (el.type === "checkbox") el.checked = snap.vals[k]; else el.value = snap.vals[k];
+  });
+  if (snap.focus) {
+    const el = [...document.querySelectorAll(KEEP_SEL)].find((x) => keepKey(x) === snap.focus.k);
+    if (el) {
+      el.focus({ preventScroll: true });
+      try { if (snap.focus.s != null && !(skip && skip.has(snap.focus.k))) el.setSelectionRange(snap.focus.s, snap.focus.e); } catch (_) {}
+    }
+  }
+}
+/** Перерисовать шторку, не потеряв ввод и фокус. */
+function renderSheet() {
+  if (!ui.sheet) return;
+  const snap = snapKeep();
+  ui.sheet.render();
+  restoreKeep(snap);
+}
+const kp = (key) => ` data-keep="${key}"`;
+
 function render() {
+  const snap = snapKeep();
   const tabs = TABS.map((t) =>
     `<button class="${ui.tab === t.id ? "on" : ""}" data-act="tab" data-tab="${t.id}"><span>${t.e}</span>${t.n}</button>`);
   // «+» посередине панели: всегда под пальцем и не перекрывает карточки
@@ -416,6 +589,7 @@ function render() {
   const v = document.getElementById("view");
   v.innerHTML = ({ my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, stats: viewStats, settings: viewSettings }[ui.tab] || viewMy)();
   if (ui.sheet) ui.sheet.render();
+  restoreKeep(snap);
   syncNative();
 }
 
@@ -448,52 +622,48 @@ function onboarding(where) {
   const required = steps.filter((x) => !x.optional);
   if (where === "settings" ? steps.every((x) => x.ok) : required.every((x) => x.ok)) return "";
   const done = required.filter((x) => x.ok).length;
-  return `<div class="card onb"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${required.length}</span></div>
+  // свёрнутая карточка помнится: настройка не должна занимать первый экран каждый раз
+  if (store("onbCollapsed") === "1") {
+    return `<div class="card onb onb-head" data-act="toggle-onb"><div class="row"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${required.length}</span><span class="muted">▸</span></div></div>`;
+  }
+  return `<div class="card onb"><div class="row onb-head" data-act="toggle-onb"><b class="grow">🚀 Настройка</b><span class="badge">${done} из ${required.length}</span><span class="muted">▾</span></div>
     ${steps.map((x) => `<div class="row" style="padding:7px 0;border-top:1px solid var(--sep)"><span>${x.ok ? "✅" : x.optional ? "💡" : "⬜"}</span>
       <div class="grow small">${esc(x.t)}${!x.ok && x.hint ? `<div class="muted">${esc(x.hint)}</div>` : ""}</div>
       ${!x.ok && x.btn ? `<button class="btn sm" data-act="edit-project" data-id="${x.btn[1]}">${esc(x.btn[0])}</button>` : ""}</div>`).join("")}</div>`;
 }
 
 // --- Мои задачи
-function myGroups() {
-  const mine = S.tasks.filter((t) => t.assignee_id === S.me.tg_id && !t.done_at);
+function nowGroups(all) {
+  const me = S.me.tg_id;
+  const open = S.tasks.filter((t) => !t.done_at && (all || t.assignee_id === me));
   const map = new Map();
-  for (const t of mine) {
+  for (const t of open) {
     const k = t.episode_id + ":" + t.stage;
     if (!map.has(k)) map.set(k, { eid: t.episode_id, stage: t.stage });
   }
   return [...map.values()].map((g) => {
     const info = stageInfo(g.eid, g.stage);
-    const myOpen = info.ts.filter((t) => t.assignee_id === S.me.tg_id && !t.done_at);
-    const activeMine = myOpen.filter(isActive);
+    const mine = info.ts.filter((t) => !t.done_at && (all || t.assignee_id === me));
+    const activeMine = mine.filter(isActive);
     const due = activeMine.map((t) => t.due_date).filter(Boolean).sort()[0] || info.due;
-    return { ...g, info, activeMine, due, waiting: activeMine.length === 0 };
+    return { ...g, info, activeMine, due, waiting: activeMine.length === 0, who: [...new Set(mine.map((t) => t.assignee_id))].map(mem).filter(Boolean) };
   }).filter((g) => ep(g.eid)).sort((a, b) => (a.due || "9").localeCompare(b.due || "9"));
 }
 
-function taskGroupCard(g) {
-  const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
-  const single = g.info.total === 1 && !g.info.ts[0].channel_id; // этап сразу на все языки
-  const langs = single ? "" : `<div class="chips" style="margin-top:8px">${g.info.ts.map(langChip).join("")}</div>`;
-  const all = g.activeMine.length > 1
-    ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine.map((t) => t.id).join(",")}">Все ${g.activeMine.length} готовы</button>`
-    : g.activeMine.length === 1 && single
-      ? `<button class="btn sm" data-act="done" data-ids="${g.activeMine[0].id}">Готово</button>` : "";
-  const waitTxt = g.waiting ? `<div class="muted" style="margin-top:6px">⏳ ждёт: ${META[PREV[g.stage]].n.toLowerCase()}</div>` : "";
-  const folder = e.drive_folder_id ? `<a class="btn ghost sm" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Папка</a>` : "";
-  // код выпуска — в начале строки: при обрезке «…» теряется хвост названия, а не то, о каком выпуске речь
-  return `<div class="card pc-stripe" style="${pc(p)}">
-    <div class="row"><div class="grow clickable" data-act="open-episode" data-id="${e.id}">
-      <div class="ellipsis"><b>${m.e} ${m.n} · ${esc(e.code)}</b> ${esc(e.title)}</div>
-      <div class="muted ellipsis">${esc(p.emoji)} ${esc(p.name)} · выход ${fmt(e.publish_date, true)}</div></div>
-      ${g.waiting ? "" : dueBadge(g.due)}</div>
-    ${langs}${waitTxt}${all || folder ? `<div class="row" style="margin-top:8px;justify-content:flex-end">${folder}${all}</div>` : ""}</div>`;
+/** Разложить по корзинам: горит (срок ≤ сегодня), дальше (до 7 дней или без срока), позже, ждёт. */
+function nowBuckets(groups, skip) {
+  const rest = groups.filter((g) => g !== skip);
+  const active = rest.filter((g) => !g.waiting);
+  const hot = active.filter((g) => g.due && g.due <= S.today);
+  const later = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) > 7);
+  const next = active.filter((g) => !hot.includes(g) && !later.includes(g));
+  return { hot, next, later, waiting: rest.filter((g) => g.waiting) };
 }
 
 function langChip(t) {
   const c = chan(t.channel_id);
   const st = t.done_at ? "done" : isActive(t) ? "active" : "blocked";
-  return `<button class="chip lang ${st}" data-act="toggle" data-id="${t.id}">${flag(c && c.lang)} ${esc((c && c.lang || "?").toUpperCase())}${t.done_at ? " ✓" : ""}</button>`;
+  return `<button class="chip lang ${st}" data-act="toggle" data-id="${t.id}">${esc(langTag(c && c.lang))}${t.done_at ? " ✓" : ""}</button>`;
 }
 
 /** Прогресс выпуска по 4 этапам (зелёная заливка, красный — просрочено, синий — в работе). */
@@ -526,9 +696,9 @@ function heroCard(g) {
   const folder = e.drive_folder_id ? `<a class="btn ghost dup-second" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Папка</a>` : "";
   return `<div class="hero" style="${pc(p)}">
     <div class="bg-emoji">${m.e}</div>
-    <div class="kicker"><span class="pdot"></span>${esc(p.emoji)} ${esc(p.name)} · главное сейчас</div>
+    <div class="kicker"><span class="pdot"></span>главное сейчас</div>
     <div class="stage">${m.e} ${m.n}</div>
-    <div class="ep" data-act="open-episode" data-id="${e.id}">${esc(e.code)} · ${esc(e.title)} ›</div>
+    <div class="ep" data-act="open-episode" data-id="${e.id}">${esc(epLabel(e))} ›</div>
     <div class="muted small">выход ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}</div>
     <span class="due ${d.cls}">${d.t}</span>${langs}
     ${progressBars(e.id)}
@@ -536,13 +706,23 @@ function heroCard(g) {
   </div>`;
 }
 
+/** Строка задачи в «Горит / Дальше / Ждёт»; под заголовком проекта выпуск подписан коротко («🔭 S04»). */
 function nextRow(g) {
   const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
+  const who = ui.nowAll && g.who.length ? ` · ${g.who.map((x) => esc(x.name)).join(", ")}` : "";
+  const sub = g.waiting ? `⏳ ждёт ${META[PREV[g.stage]].n.toLowerCase()}` : "";
   return `<div class="next-row" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
-    <span class="pdot"></span><span style="font-size:18px">${m.e}</span>
-    <div class="t"><div class="ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div>
-      <div class="muted small ellipsis">${m.n} · ${esc(p.name)}${g.waiting ? ` · ждёт: ${META[PREV[g.stage]].n.toLowerCase()}` : ""}</div></div>
+    <span style="font-size:18px">${m.e}</span>
+    <div class="t"><div class="ellipsis"><b>${esc(epLabel(e, "short"))}</b> ${esc(e.title)}</div>
+      <div class="muted small ellipsis">${m.n}${sub ? ` · ${sub}` : ""}${who}</div></div>
     ${g.waiting ? `<span class="badge">⏳</span>` : dueBadge(g.due)}</div>`;
+}
+
+/** Секция списка: заголовок и строки, сгруппированные по проектам. */
+function nowSection(title, groups) {
+  if (!groups.length) return "";
+  const rows = S.projects.map((p) => ({ p, gs: groups.filter((g) => ep(g.eid).project_id === p.id) })).filter((x) => x.gs.length);
+  return title + rows.map(({ p, gs }) => `<div class="pgroup" style="${pc(p)}"><div class="ph"><span class="pdot"></span>${esc(p.emoji)} ${esc(p.name)}</div>${gs.map(nextRow).join("")}</div>`).join("");
 }
 
 /** Кого ждём: для моих задач, которые ещё нельзя начать, — чей предыдущий этап. */
@@ -550,38 +730,36 @@ function waitingFor(g) {
   const t = g.info.ts.find((x) => !x.done_at);
   const b = t && blocker(t);
   const who = b && mem(b.assignee_id);
-  return b ? `${META[b.stage].e} ${META[b.stage].n.toLowerCase()} ${esc(ep(g.eid).code)}${who ? ` от ${esc(who.name)}` : ""}` : "";
+  return b ? `${META[b.stage].e} ${META[b.stage].n.toLowerCase()} ${esc(epLabel(ep(g.eid), "short"))}${who ? ` от ${esc(who.name)}` : ""}` : "";
 }
 
 function viewMy() {
-  const gs = myGroups();
-  const active = gs.filter((g) => !g.waiting);
-  const waiting = gs.filter((g) => g.waiting);
-  const hero = active[0] || null;
+  const all = ui.nowAll;
+  const gs = nowGroups(all);
+  // главная карточка и кнопка Telegram — только в «Мои»: в «Все» чужие задачи отмечать отсюда не надо
+  const hero = all ? null : gs.find((g) => !g.waiting) || null;
   ui.hero = hero;
-  const overdue = active.filter((g) => g.due && g.due < S.today).length;
-  const today = active.filter((g) => g.due === S.today).length;
-  const week = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) <= 7).length;
+  const b = nowBuckets(gs, hero);
   const unassigned = S.tasks.filter((t) => !t.done_at && t.assignee_id == null).length;
   let html = onboarding();
   html += `<div class="row" style="margin:0 4px 10px"><div class="grow"><div style="font-size:20px;font-weight:800">Привет, ${esc(S.me.name)} 👋</div>
-    <div class="muted">${fmt(S.today, true)}</div></div></div>`;
+    <div class="muted">${fmt(S.today, true)}</div></div>
+    <div class="seg"><button class="${all ? "" : "on"}" data-act="now-all" data-v="0">Мои</button><button class="${all ? "on" : ""}" data-act="now-all" data-v="1">Все</button></div></div>`;
   if (!S.projects.length) return html;
-  const counter = (n, label, bad) => `<div class="counter ${bad && n ? "bad" : ""}"><b>${n}</b>${label}</div>`;
   const left = [];
-  left.push(`<div class="counters">${counter(overdue, "просрочено", true)}${counter(today, "сегодня")}${counter(week, "на неделе")}${waiting.length ? counter(waiting.length, "ждут других") : ""}</div>`);
   if (hero) left.push(heroCard(hero));
-  else {
-    const w = waiting[0];
-    left.push(`<div class="card calm"><div class="big">🎉</div><b>Сейчас твоих задач нет</b>
-      <div class="muted small" style="margin-top:4px">${w ? `Дальше ждём: ${waitingFor(w)}` : "Отдыхай или запланируй новый выпуск кнопкой «+»."}</div></div>`);
+  else if (!all || !gs.length) {
+    const w = b.waiting[0];
+    left.push(`<div class="card calm"><div class="big">${all ? "🗂" : "🎉"}</div><b>${all ? "Открытых задач нет" : "✅ Всё сделано"}</b>
+      <div class="muted small" style="margin-top:4px">${all ? "Новый выпуск — кнопка «+»." : w ? `Дальше ждём: ${waitingFor(w)}` : (b.next[0] || b.later[0]) ? `Следующее: ${esc(epLabel(ep((b.next[0] || b.later[0]).eid), "short"))}, ${META[(b.next[0] || b.later[0]).stage].n.toLowerCase()}` : "Отдыхай или запланируй новый выпуск кнопкой «+»."}</div></div>`);
   }
-  const rest = active.slice(1);
   const right = [];
-  if (rest.length) right.push(`<h2>Дальше</h2>${rest.map(nextRow).join("")}`);
-  if (waiting.length) {
-    right.push(`<h2 class="clickable" data-act="toggle-waiting">${ui.showWaiting ? "▾" : "▸"} ⏳ Ждут других (${waiting.length})</h2>`);
-    if (ui.showWaiting) right.push(waiting.map(nextRow).join(""));
+  right.push(nowSection(`<h2>🔥 Горит · ${b.hot.length}</h2>`, b.hot));
+  right.push(nowSection(`<h2>Дальше · ${b.next.length}</h2>`, b.next));
+  if (b.later.length) right.push(`<div class="muted small" style="margin:8px 4px">Ещё позже: ${b.later.length} ${b.later.length === 1 ? "задача" : "задач(и)"}${all ? "" : " — они в «Выпусках»"}.</div>`);
+  if (b.waiting.length) {
+    right.push(`<h2 class="clickable" data-act="toggle-waiting">${ui.showWaiting ? "▾" : "▸"} ⏳ Ждёт${all ? "" : " других"} · ${b.waiting.length}</h2>`);
+    if (ui.showWaiting) right.push(nowSection("", b.waiting));
   }
   if (unassigned) right.push(`<div class="card small" style="margin-top:8px">⚠️ ${unassigned} задач(и) без ответственного — назначь роли в <a href="#" data-act="tab" data-tab="settings">Настройках</a>.</div>`);
   return html + `<div class="now-wrap"><div>${left.join("")}</div><div>${right.join("")}</div></div>`;
@@ -604,8 +782,8 @@ function episodeRow(e) {
   const anyLate = STAGES.some((st) => stageInfo(e.id, st).late);
   const badge = done ? `<span class="badge ok">готово</span>` : `<span class="badge ${anyLate ? "late" : daysBetween(S.today, e.publish_date) <= 0 ? "today" : ""}">${fmt(e.publish_date)}</span>`;
   return `<div class="card clickable pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
-    <div class="row"><div class="grow"><div class="ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div>
-    <div class="muted ellipsis">${esc(p.emoji)} ${esc(p.name)} · ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}</div></div>${badge}</div>
+    <div class="row"><div class="grow"><div class="ellipsis">${epHtml(e)}</div>
+    <div class="muted ellipsis">выход ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}</div></div>${badge}</div>
     <div class="progress">${bars}</div>
     <div class="stage-labels">${STAGES.map((s) => `<span>${META[s].e} ${META[s].n}</span>`).join("")}</div></div>`;
 }
@@ -633,7 +811,7 @@ function kanbanCard(e, col) {
       + `<span style="margin-left:auto">${i.active ? dueBadge(i.due) : `<span class="badge">выход ${fmt(e.publish_date)}</span>`}</span>`;
   }
   return `<div class="kcard" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
-    <div class="muted small ellipsis">${esc(p.emoji)} ${esc(p.name)} · <b style="color:var(--text)">${esc(e.code)}</b></div>
+    <div class="muted small ellipsis"><b style="color:var(--text)">${esc(epHead(e))}</b></div>
     <div class="tt">${esc(e.title)}</div><div class="mt">${meta}</div></div>`;
 }
 
@@ -683,12 +861,15 @@ function dayEvents(d) {
     const e = ep(t.episode_id);
     if (!e || (ui.project !== "all" && String(e.project_id) !== ui.project)) continue;
     const k = t.episode_id + ":" + t.stage;
-    const g = map.get(k) || { eid: t.episode_id, stage: t.stage, open: 0, total: 0 };
+    const g = map.get(k) || { eid: t.episode_id, stage: t.stage, open: 0, total: 0, active: 0 };
     g.total++;
     if (!t.done_at) g.open++;
+    if (isActive(t)) g.active++;
     map.set(k, g);
   }
-  return { pubs, dls: [...map.values()] };
+  // этап ещё нельзя начать: открыт, но ни одна его задача не активна (ждёт предыдущий этап)
+  const dls = [...map.values()].map((g) => ({ ...g, waiting: g.open > 0 && g.active === 0 }));
+  return { pubs, dls };
 }
 
 function viewCalendar() {
@@ -702,25 +883,26 @@ function viewCalendar() {
     const { pubs, dls } = dayEvents(d);
     const cls = ["day", d.slice(0, 7) !== ui.month && "out", d === S.today && "today", d === ui.day && "sel"].filter(Boolean).join(" ");
     const ev = pubs.slice(0, 4).map((e) => episodeDone(e.id) ? "✅" : esc(proj(e.project_id).emoji)).join("") + (pubs.length > 4 ? "…" : "");
-    const dots = dls.slice(0, 8).map((g) => `<i class="${g.open === 0 ? "ok" : d < S.today ? "late" : ""}" style="${g.open === 0 || d < S.today ? "" : "background:" + pcolor(proj(ep(g.eid).project_id))}"></i>`).join("");
+    const dots = dls.slice(0, 8).map((g) => `<i class="${g.open === 0 ? "ok" : g.waiting ? "wait" : d < S.today ? "late" : ""}" style="${g.open === 0 || g.waiting || d < S.today ? "" : "background:" + pcolor(proj(ep(g.eid).project_id))}"></i>`).join("");
     cells += `<div class="${cls}" data-act="day" data-d="${d}"><span class="n">${Number(d.slice(8))}</span><span class="ev">${ev}</span><span class="dl">${dots}</span></div>`;
   }
   let html = projectChips() + `<div class="cal-wrap"><div>`;
   html += `<div class="cal-head"><button class="btn ghost sm" data-act="month" data-dir="-1">‹</button><b>${MONTHS[m - 1]} ${y}</b><button class="btn ghost sm" data-act="month" data-dir="1">›</button></div>`;
   html += `<div class="cal">${WD.map((w) => `<div class="wd">${w}</div>`).join("")}${cells}</div>`;
-  html += `<div class="muted small" style="margin:8px 4px">Значок проекта — день выхода, точки — сроки этапов (красные — просрочены, зелёные — сделаны).</div></div><div class="side">`;
+  html += `<div class="muted small" style="margin:8px 4px">Значок проекта — день выхода, точки — сроки этапов (красные — просрочены, зелёные — сделаны, пустые — ждут предыдущий этап).</div></div><div class="side">`;
   const d = ui.day || S.today;
   const { pubs, dls } = dayEvents(d);
   html += `<h2>${fmt(d, true)}${d === S.today ? " · сегодня" : ""}</h2>`;
   if (!pubs.length && !dls.length) html += `<div class="card muted">Ничего не запланировано</div>`;
   for (const e of pubs) {
     const p = proj(e.project_id);
-    html += `<div class="card clickable row pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>📤 Выход</b> · ${esc(p.emoji)} ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">«${esc(e.title)}» · ${projChannels(p.id).length} каналов</div></div>${episodeDone(e.id) ? `<span class="badge ok">готово</span>` : ""}</div>`;
+    html += `<div class="card clickable row pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>📤 Выход</b> · ${esc(epHead(e))}<div class="muted ellipsis">«${esc(e.title)}» · ${projChannels(p.id).length} каналов</div></div>${episodeDone(e.id) ? `<span class="badge ok">готово</span>` : ""}</div>`;
   }
   for (const g of dls) {
     const e = ep(g.eid), p = proj(e.project_id);
     const who = [...new Set(epTasks(e.id).filter((t) => t.stage === g.stage).map((t) => (mem(t.assignee_id) || { name: "—" }).name))].join(", ");
-    html += `<div class="card clickable row" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>${META[g.stage].e} ${META[g.stage].n}</b> · ${esc(p.name)} ${esc(e.code)}<div class="muted ellipsis">${esc(who)} · «${esc(e.title)}»</div></div><span class="badge ${g.open === 0 ? "ok" : d < S.today ? "late" : ""}">${g.open === 0 ? "✓" : g.total > 1 ? `${g.total - g.open}/${g.total}` : "срок"}</span></div>`;
+    const prev = PREV[g.stage] ? META[PREV[g.stage]].n.toLowerCase() : "";
+    html += `<div class="card clickable row pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}"><div class="grow"><b>${META[g.stage].e} ${META[g.stage].n}</b> · ${esc(epHead(e))}<div class="muted ellipsis">${esc(who)} · «${esc(e.title)}»</div></div><span class="badge ${g.open === 0 ? "ok" : g.waiting ? "" : d < S.today ? "late" : ""}">${g.open === 0 ? "✓" : g.waiting ? `⏳ ждёт ${esc(prev)}` : g.total > 1 ? `${g.total - g.open}/${g.total}` : "срок"}</span></div>`;
   }
   return html + `</div></div>`;
 }
@@ -746,6 +928,7 @@ function loadStats() {
   const key = statsKey();
   if (ui.statsLoading === key) return;
   ui.statsLoading = key;
+  ui.statsError = null;
   api("stats", { days: ui.statsDays, project_id: ui.project === "all" ? null : Number(ui.project) })
     // ответ на старый фильтр, пришедший после смены фильтра, не затирает свежий
     .then((data) => { if (!ui.stats || key === statsKey()) { ui.stats = { key, data }; ui.statsError = null; } })
@@ -755,11 +938,12 @@ function loadStats() {
 
 function viewStats() {
   const key = statsKey();
-  // новые цифры грузятся поверх старых (приглушённых), без мигания пустым экраном
-  if ((!ui.stats || ui.stats.key !== key) && !(ui.statsError && ui.statsError.key === key)) loadStats();
+  const failed = ui.statsError && ui.statsError.key === key;
+  // новые цифры грузятся поверх старых (приглушённых), без мигания пустым экраном; после ошибки — только по «Повторить»
+  if ((!ui.stats || ui.stats.key !== key) && !failed) loadStats();
   let html = `<div class="chips">${[7, 30, 90].map((d) => `<button class="chip ${ui.statsDays === d ? "on" : ""}" data-act="stats-days" data-d="${d}">${d} дней</button>`).join("")}${fullscreenChip()}</div>` + projectChips();
-  if (ui.statsError && ui.statsError.key === key && !ui.stats) return html + `<div class="empty">😕 ${esc(ui.statsError.msg)}</div>`;
-  if (!ui.stats) return html + `<div class="loading">Считаю…</div>`;
+  if (failed) html += `<div class="banner"><span class="grow">Не обновилось · ${esc(ui.statsError.msg)}</span><button class="btn sm" data-act="stats-retry">Повторить</button></div>`;
+  if (!ui.stats) return html + (failed ? "" : `<div class="loading">Считаю…</div>`);
   const d = ui.stats.data;
   html += `<div class="${ui.stats.key !== key ? "stale" : ""}">`;
   html += `<div class="muted" style="margin:0 4px 8px">${fmt(d.from)} – ${fmt(d.to)}</div>`;
@@ -826,7 +1010,7 @@ function statsLangs(d) {
           c.videosInPeriod ? `новых: ${c.videosInPeriod}` : ""].filter(Boolean).join(" · ");
         const name = chName(c.channel_id, c.lang);
         return `<div class="bar-row" title="${esc(name)}: ${txt}">
-          <span class="ellipsis">${flag(c.lang)} ${esc(name)}</span><span class="num">${txt}</span>
+          <span class="ellipsis">${esc(name)}</span><span class="num">${txt}</span>
           <div class="bar">${v == null ? "" : `<b style="width:${w}%"></b>`}</div></div>
           <div class="bar-sub muted small">${sub}</div>`;
       }).join("")}${legend}</div>`;
@@ -840,7 +1024,7 @@ function statsEpisodes(d) {
     const p = proj(e.project_id) || { emoji: "" };
     return `<div class="ep-views"><div class="row"><div class="grow ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div><span class="num"><b>${fmtNum(e.total)}</b></span></div>
       <div class="muted small">${esc(p.emoji)} вышел ${e.published ? fmt(e.published.slice(0, 10)) : "—"}</div>
-      <div class="chips">${e.langs.map((l) => `<a class="chip" href="https://youtu.be/${esc(l.video_id)}" data-act="open-link" title="${l.d7 != null ? `за 7 дней: ${fmtNum(l.d7)}` : ""}">${flag(l.lang)} <span class="num">${fmtNum(l.views)}</span></a>`).join("")}</div></div>`;
+      <div class="chips">${e.langs.map((l) => `<a class="chip" href="https://youtu.be/${esc(l.video_id)}" data-act="open-link" title="${l.d7 != null ? `за 7 дней: ${fmtNum(l.d7)}` : ""}">${esc(langTag(l.lang))} <span class="num">${fmtNum(l.views)}</span></a>`).join("")}</div></div>`;
   }).join("")}</div>`;
 }
 
@@ -884,7 +1068,7 @@ function viewSettings() {
       return `${META[st].e} ${esc((mem(r && r.member_id) || { name: "—" }).name)}`;
     }).join(" · ");
     html += `<div class="card pc-stripe ${admin ? "clickable" : ""}" style="${pc(p)}" ${admin ? `data-act="edit-project" data-id="${p.id}"` : ""}>
-      <div class="row"><div class="grow"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted">${chs.map((c) => flag(c.lang) + " " + esc(c.lang.toUpperCase())).join("  ") || "нет каналов"}</div>
+      <div class="row"><div class="grow"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted">${chs.map((c) => esc(langTag(c.lang))).join(" · ") || "нет каналов"}</div>
       <div class="muted">${roles}</div>
       <div class="muted">${p.drive_folder_id ? "📁 Диск ✅" : "📁 Диск: папка не задана"} · Темы: ${topicStatus(p)}</div></div>${admin ? "›" : ""}</div></div>`;
   }
@@ -901,10 +1085,10 @@ function viewSettings() {
       <button class="btn sm" data-act="fullscreen">${tg.isFullscreen ? "Обычное окно" : "На весь экран"}</button></div>`;
   }
   html += `<h2>Напоминания</h2><div class="card">
-    <label class="f"><span>Часовой пояс команды</span><input class="inp" id="set-tz" list="tz-list" value="${esc(st.timezone)}" ${admin ? "" : "disabled"}></label>
+    <label class="f"><span>Часовой пояс команды</span><input class="inp" id="set-tz"${kp("set-tz")} list="tz-list" value="${esc(st.timezone)}" ${admin ? "" : "disabled"}></label>
     <datalist id="tz-list">${["Europe/Moscow", "Asia/Tashkent", "Asia/Almaty", "Asia/Yekaterinburg", "Europe/Samara", "Europe/Kyiv", "Asia/Bishkek", "Asia/Dushanbe", "Asia/Baku", "Europe/Istanbul", "Europe/Berlin", Intl.DateTimeFormat().resolvedOptions().timeZone].filter((v, i, a) => a.indexOf(v) === i).map((z) => `<option value="${z}">`).join("")}</datalist>
-    <div class="grid2"><label class="f"><span>Утренний план, час</span><input class="inp" id="set-morning" type="number" min="0" max="23" value="${st.morning_hour}" ${admin ? "" : "disabled"}></label>
-    <label class="f"><span>Вечернее напоминание, час</span><input class="inp" id="set-evening" type="number" min="0" max="23" value="${st.evening_hour}" ${admin ? "" : "disabled"}></label></div>
+    <div class="grid2"><label class="f"><span>Утренний план, час</span><input class="inp" id="set-morning"${kp("set-morning")} type="number" min="0" max="23" value="${st.morning_hour}" ${admin ? "" : "disabled"}></label>
+    <label class="f"><span>Вечернее напоминание, час</span><input class="inp" id="set-evening"${kp("set-evening")} type="number" min="0" max="23" value="${st.evening_hour}" ${admin ? "" : "disabled"}></label></div>
     ${admin ? `<button class="btn block" data-act="save-settings">Сохранить</button>` : ""}
     <div class="muted small" style="margin-top:8px">${st.group_linked ? "✅ Группа подключена." : "⚠️ Группа не подключена: добавь бота в группу админом и напиши там /setup."} По понедельникам бот кладёт план недели в тему, привязанную командой /bind → «дайджесты».</div></div></div>`;
   return html;
@@ -932,7 +1116,8 @@ function closeSheet() {
 // ---------- кнопки внизу экрана Telegram (MainButton / SecondaryButton) ----------
 let nativeNow = { main: null, second: null };
 const hasMain = () => !!(tg && tg.MainButton && (tg.initData || FAKE_NATIVE));
-const hasSecond = () => !!(tg && tg.SecondaryButton && (tg.initData || FAKE_NATIVE));
+// SecondaryButton есть в объекте WebApp и на старых клиентах, но Telegram < 7.10 его не рисует: тогда «📁 Папка» остаётся на странице
+const hasSecond = () => !!(tg && tg.SecondaryButton && (tg.initData || FAKE_NATIVE) && tg.isVersionAtLeast && tg.isVersionAtLeast("7.10"));
 
 function setNative(main, second) {
   nativeNow = { main: main || null, second: second || null };
@@ -955,7 +1140,7 @@ function syncNative() {
   const single = g.info.total === 1 && !g.info.ts[0].channel_id;
   const ids = g.activeMine.map((t) => t.id);
   const main = ids.length && (single || ids.length > 1)
-    ? { text: ids.length > 1 ? `✅ Все ${ids.length} готовы` : `✅ ${META[g.stage].n} ${e.code} — готово`, run: () => act("tasks.done", { ids, done: true }, "✅ Отмечено") }
+    ? { text: ids.length > 1 ? `✅ Все ${ids.length} готовы · ${epBtn(e)}` : `✅ ${META[g.stage].n} · ${epBtn(e)}`, run: () => markDone(ids) }
     : null;
   const second = e.drive_folder_id ? { text: "📁 Папка", run: () => openUrl(folderLink(e.drive_folder_id)) } : null;
   setNative(main || second, main ? second : null);
@@ -969,7 +1154,7 @@ function episodeNative(id) {
     const mine = epTasks(id).filter((t) => t.assignee_id === S.me.tg_id && isActive(t));
     const st = mine[0] && mine[0].stage;
     const ids = mine.filter((t) => t.stage === st).map((t) => t.id);
-    const main = ids.length ? { text: ids.length > 1 ? `✅ ${META[st].n}: все ${ids.length} готовы` : `✅ ${META[st].n} — готово`, run: () => act("tasks.done", { ids, done: true }, "✅ Отмечено") } : null;
+    const main = ids.length ? { text: ids.length > 1 ? `✅ Все ${ids.length} ${META[st].n.toLowerCase()} · ${epBtn(e)}` : `✅ ${META[st].n} · ${epBtn(e)}`, run: () => markDone(ids) } : null;
     const second = e.drive_folder_id ? { text: "📁 Папка", run: () => openUrl(folderLink(e.drive_folder_id)) } : null;
     return { main: main || second, second: main ? second : null };
   };
@@ -984,20 +1169,26 @@ function memberOptions(selected, emptyLabel = "— никто") {
   return `<option value="">${emptyLabel}</option>` + S.members.map((m) => `<option value="${m.tg_id}" ${m.tg_id === selected ? "selected" : ""}>${esc(m.name)}</option>`).join("");
 }
 
+/** «⚡ Сжатый график» под датой выхода: при создании и при переносе. */
+function compressNote(p, date) {
+  return isCompressedFor(p, date) ? `<div class="note warn">⚡ Сжатый график: сценарий нужен сегодня, остальные этапы идут подряд до выхода.</div>` : "";
+}
+
 function episodeSheet(id) {
   return () => {
     const e = ep(id);
     if (!e) { closeSheet(); return ""; }
     const p = proj(e.project_id);
     const links = S.links.filter((l) => l.episode_id === id);
-    let html = `<div class="sheet-title" style="${pc(p)}"><span class="pdot"></span><b>${esc(p.emoji)} ${esc(p.name)} · ${esc(e.code)}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
+    let html = `<div class="sheet-title" style="${pc(p)}"><span class="pdot"></span><b>${esc(epHead(e))}</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
       ${progressBars(e.id)}<div style="height:10px"></div>
       ${e.drive_folder_id ? `<a class="btn block dup-second" style="display:block;text-align:center;margin-bottom:8px" href="${folderLink(e.drive_folder_id)}" data-act="open-link">📁 Открыть папку на Диске</a>
         <div class="muted small" style="margin:-2px 4px 10px">Внутри: 1_Сценарий · 2_Озвучка · 3_Готовое видео. Кладите файлы — этапы отметятся сами.</div>` : ""}
       <div class="card">
-        <label class="f"><span>Название</span><input class="inp" data-field="title" value="${esc(e.title)}"></label>
-        <div class="grid2"><label class="f"><span>Код</span><input class="inp" data-field="code" value="${esc(e.code)}"></label>
-        <label class="f"><span>Дата выхода</span><input class="inp" type="date" data-field="publish_date" value="${e.publish_date}"></label></div>
+        <label class="f"><span>Название</span><input class="inp" data-field="title"${kp("f-title")} value="${esc(e.title)}"></label>
+        <div class="grid2"><label class="f"><span>Код</span><input class="inp" data-field="code"${kp("f-code")} value="${esc(e.code)}"></label>
+        <label class="f"><span>Дата выхода</span><input class="inp" type="date" data-field="publish_date"${kp("f-date")} value="${e.publish_date}"></label></div>
+        <div id="ep-compress">${compressNote(p, e.publish_date)}</div>
         <div class="muted small">Сроки этапов пересчитаются от даты выхода. Срок выкладки и дата выхода — одно и то же: поменяешь одно, поменяется и другое.</div>
       </div>`;
     for (const st of STAGES) {
@@ -1015,14 +1206,29 @@ function episodeSheet(id) {
         ${body}${i.late ? `<div class="small" style="color:var(--danger);margin-top:6px">⚠️ срок был ${fmt(i.due)}</div>` : ""}</div>`;
     }
     html += `<h2>Ссылки</h2><div class="card">${links.map((l) => `<div class="link-row"><span>${l.stage ? META[l.stage].e : "🔗"}</span><a class="grow ellipsis" href="${esc(l.url)}" data-act="open-link">${esc(l.title || (l.stage ? META[l.stage].n : l.url))}</a><button class="icon-btn" data-act="del-link" data-id="${l.id}">✕</button></div>`).join("") || `<div class="muted">Пока нет. Можно кинуть ссылку ответом на карточку в группе.</div>`}</div>
-      <div class="card"><div class="row" style="gap:6px"><input class="inp grow" id="link-url" placeholder="https://drive.google.com/…"></div>
-      <div class="row" style="margin-top:6px;gap:6px"><input class="inp grow" id="link-title" placeholder="Подпись (необязательно)">
-      <select class="inp" id="link-stage" style="width:auto">${STAGES.map((s) => `<option value="${s}">${META[s].e} ${META[s].n}</option>`).join("")}<option value="">🔗 Другое</option></select></div>
+      <div class="card"><div class="row" style="gap:6px"><input class="inp grow" id="link-url"${kp("link-url")} placeholder="https://drive.google.com/…"></div>
+      <div class="row" style="margin-top:6px;gap:6px"><input class="inp grow" id="link-title"${kp("link-title")} placeholder="Подпись (необязательно)">
+      <select class="inp" id="link-stage"${kp("link-stage")} style="width:auto">${STAGES.map((s) => `<option value="${s}">${META[s].e} ${META[s].n}</option>`).join("")}<option value="">🔗 Другое</option></select></div>
       <button class="btn block" style="margin-top:8px" data-act="add-link" data-id="${id}">Добавить ссылку</button></div>
-      <h2>Заметки</h2><div class="card"><textarea class="inp" data-field="notes" placeholder="Идеи, правки, тайм-коды…">${esc(e.notes || "")}</textarea></div>
+      <h2>Заметки</h2><div class="card"><textarea class="inp" data-field="notes"${kp("f-notes")} placeholder="Идеи, правки, тайм-коды…">${esc(e.notes || "")}</textarea></div>
       <button class="btn danger block" data-act="del-episode" data-id="${id}">Удалить выпуск</button>`;
     return html;
   };
+}
+
+/** Подсказки формы нового выпуска: сжатый график, чужая папка, сроки. Обновляются на месте, без перерисовки полей. */
+function newEpHints(st) {
+  const p = proj(st.project_id) || S.projects[0];
+  const compressed = st.compressed != null ? st.compressed : isCompressedFor(p, st.date);
+  let html = "";
+  if (compressed) html += `<div class="note warn">⚡ Сжатый график: сценарий нужен сегодня, остальные этапы идут подряд до выхода.</div>`;
+  if (st.folder) {
+    html += `<label class="note" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="ne-usefolder" data-act-change="ne-usefolder"${kp("ne-usefolder")} ${st.useFolder ? "checked" : ""}>
+      <span>Возьму папку «${esc(st.folder.name)}» с Диска — новая не создастся, номер ей не нужен.</span></label>`;
+  }
+  const folderNote = st.folder && st.useFolder ? "" : p.drive_folder_id ? `📁 На Диске появится папка «${esc(st.code || st.codeHint || "…")} ${esc(st.title || "Название")}» с подпапками 1_Сценарий, 2_Озвучка, 3_Готовое видео.<br>` : "";
+  html += `<div class="muted small">${folderNote}Сроки — по настройкам проекта: сценарий за ${p.script_offset} дн. до выхода, ${esc(voiceHint(p))}, монтаж за ${p.edit_offset} дн.</div>`;
+  return html;
 }
 
 function newEpisodeSheet(state) {
@@ -1031,10 +1237,10 @@ function newEpisodeSheet(state) {
     return `<div class="sheet-title"><b>Новый выпуск</b><button class="icon-btn" data-act="close-sheet">✕</button></div>
     <div class="card">
       <label class="f"><span>Проект</span><select class="inp" id="ne-project" data-act-change="ne-project">${S.projects.map((x) => `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${esc(x.emoji)} ${esc(x.name)}</option>`).join("")}</select></label>
-      <label class="f"><span>Название</span><input class="inp" id="ne-title" placeholder="Как Эратосфен измерил Землю" value="${esc(state.title || "")}"></label>
-      <div class="grid2"><label class="f"><span>Код (авто)</span><input class="inp" id="ne-code" placeholder="${esc(state.codeHint || "S01")}"></label>
-      <label class="f"><span>Дата выхода</span><input class="inp" type="date" id="ne-date" value="${state.date || ""}"></label></div>
-      <div class="muted small">${p.drive_folder_id ? `📁 На Диске появится папка «${esc(state.codeHint || "…")} ${esc(state.title || "Название")}» с подпапками 1_Сценарий, 2_Озвучка, 3_Готовое видео.<br>` : ""}Сроки — по настройкам проекта: сценарий за ${p.script_offset} дн. до выхода, озвучка в день сценария, монтаж за ${p.edit_offset} дн.</div>
+      <label class="f"><span>Название</span><input class="inp" id="ne-title"${kp("ne-title")} placeholder="Как Эратосфен измерил Землю" value="${esc(state.title)}"></label>
+      <div class="grid2"><label class="f"><span>Код (авто)</span><input class="inp" id="ne-code"${kp("ne-code")} placeholder="${esc(state.codeHint || "S01")}" value="${esc(state.code)}"></label>
+      <label class="f"><span>Дата выхода</span><input class="inp" type="date" id="ne-date"${kp("ne-date")} value="${state.date || ""}"></label></div>
+      <div id="ne-hints">${newEpHints(state)}</div>
     </div>
     <button class="btn block dup-main" data-act="create-episode">Создать</button>`;
   };
@@ -1051,27 +1257,42 @@ function nextCode(pid) {
   return "S" + String(max + 1).padStart(2, "0");
 }
 
+/** Форма хранит всё набранное в ui.newEp: ответ сервера и смена проекта её не затирают. */
 async function openNewEpisode() {
   const pid = ui.project !== "all" ? Number(ui.project) : S.projects[0].id;
-  const state = { project_id: pid, codeHint: nextCode(pid), date: "" };
-  openSheet(newEpisodeSheet(state), () => ({ main: { text: "Создать выпуск", run: () => handlers["create-episode"]() } }));
+  const state = { project_id: pid, title: "", code: "", date: "", dateTouched: false, codeHint: nextCode(pid), folder: null, useFolder: true, compressed: null, seq: 0 };
   ui.newEp = state;
+  openSheet(newEpisodeSheet(state), () => ({ main: { text: "Создать выпуск", run: () => handlers["create-episode"]() } }));
   await suggestDate(state);
 }
+
+/** Подсказка с сервера: дата, номер, ничейная папка, сжатый график. Своя дата и код пользователя не перетираются. */
 async function suggestDate(state) {
-  try {
-    const r = await api("episode.suggest", { project_id: state.project_id });
-    state.date = r.publish_date;
-    if (r.code) state.codeHint = r.code; // номер с учётом папок на Диске
-    if (ui.sheet && ui.newEp === state) {
-      const t = document.getElementById("ne-title"), d = document.getElementById("ne-date");
-      state.title = t ? t.value : state.title;
-      if (d && d.dataset.touched) state.date = d.value;
-      ui.sheet.render();
-      if (d && d.dataset.touched) document.getElementById("ne-date").dataset.touched = "1";
-    }
-  } catch (_) {}
+  const seq = ++state.seq;
+  const body = { project_id: state.project_id };
+  if (state.title.trim()) body.title = state.title.trim();
+  if (state.dateTouched && state.date) body.publish_date = state.date;
+  let r;
+  try { r = await api("episode.suggest", body); } catch (_) { return; }
+  // ответ на устаревший запрос (проект сменили, ещё что-то набрали) игнорируется
+  if (!ui.sheet || ui.newEp !== state || seq !== state.seq) return;
+  if (!state.dateTouched && r.publish_date) state.date = r.publish_date;
+  if (r.code) state.codeHint = state.serverCode = r.code; // номер с учётом папок на Диске
+  state.folder = r.folder || null;
+  state.compressed = r.compressed == null ? null : !!r.compressed;
+  paintNewEpisode(state);
 }
+
+/** Обновить подсказки и плейсхолдеры формы на месте: поля и фокус не трогаем. */
+function paintNewEpisode(st) {
+  const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+  set("ne-hints", (el) => { el.innerHTML = newEpHints(st); });
+  set("ne-code", (el) => { el.placeholder = st.codeHint || "S01"; });
+  set("ne-date", (el) => { if (!st.dateTouched) el.value = st.date || ""; });
+}
+
+let suggestTimer = null;
+const suggestSoon = (st) => { clearTimeout(suggestTimer); suggestTimer = setTimeout(() => { if (ui.newEp === st && ui.sheet) suggestDate(st); }, 350); };
 
 function projectSheet(draft) {
   return () => {
@@ -1099,7 +1320,7 @@ function projectSheet(draft) {
     <h2>Языковые каналы</h2><div class="card">
       <div class="lang-row muted small"><span>Язык</span><span>Ссылка на YouTube-канал (для автоотметки выкладки)</span><span></span></div>
       ${draft.channels.map((c, i) => `<div class="lang-row"><input class="inp" data-ch="${i}" data-k="lang" value="${esc(c.lang)}" placeholder="en" maxlength="5">
-        <input class="inp" data-ch="${i}" data-k="youtube_url" value="${esc(c.youtube_url || "")}" placeholder="${flag(c.lang)} https://youtube.com/@канал">
+        <input class="inp" data-ch="${i}" data-k="youtube_url" value="${esc(c.youtube_url || "")}" placeholder="https://youtube.com/@канал">
         <button class="icon-btn" data-act="ch-del" data-i="${i}">✕</button></div>`).join("")}
       <button class="btn ghost sm" data-act="ch-add">+ язык</button>
       ${isNew ? "" : `<div class="muted small" style="margin-top:6px">Удаление языка удалит его задачи во всех выпусках.</div>`}</div>
@@ -1131,8 +1352,8 @@ function openProject(id) {
   openSheet(projectSheet(draft), () => ({ main: { text: draft.id ? "Сохранить" : "Создать проект", run: () => handlers["save-project"]() } }));
   if (!p && S.drive && S.drive.enabled) {
     ui.driveFolders = null;
-    api("drive.folders").then((r) => { ui.driveFolders = r.folders || []; if (ui.draft === draft) ui.sheet.render(); })
-      .catch(() => { ui.driveFolders = []; if (ui.draft === draft) ui.sheet.render(); });
+    api("drive.folders").then((r) => { ui.driveFolders = r.folders || []; if (ui.draft === draft) renderSheet(); })
+      .catch(() => { ui.driveFolders = []; if (ui.draft === draft) renderSheet(); });
   }
 }
 
@@ -1160,9 +1381,27 @@ function topicsSection(pid) {
 
 function readProjectForm() {
   const d = ui.draft;
-  document.querySelectorAll("#sheet [data-pf]").forEach((el) => { d[el.dataset.pf] = el.type === "number" && el.value !== "" ? Number(el.value) : el.value; });
+  document.querySelectorAll("#sheet [data-pf]").forEach((el) => {
+    if (el.type !== "number") d[el.dataset.pf] = el.value;
+    else d[el.dataset.pf] = el.value === "" ? (el.dataset.pf === "voice_days" ? null : "") : Number(el.value);
+  });
   document.querySelectorAll("#sheet [data-role]").forEach((el) => { d.roles[el.dataset.role] = el.value ? Number(el.value) : null; });
   document.querySelectorAll("#sheet [data-ch]").forEach((el) => { d.channels[Number(el.dataset.ch)][el.dataset.k] = el.value.trim(); });
+}
+
+/** Текст подтверждения: «Удалить канал PL и N задач выкладки?» */
+function delChannelText(chs) {
+  const n = S.tasks.filter((t) => chs.some((c) => c.id === t.channel_id)).length;
+  const names = chs.map((c) => langTag(c.lang)).join(", ");
+  return `Удалить ${chs.length > 1 ? "каналы" : "канал"} ${names} и ${n} задач выкладки?`;
+}
+/** Проверка формы проекта до отправки: пустое «каждые N дней» не должно стать нулём. */
+function projectFormError(d) {
+  const int = (v, min) => typeof v === "number" && Number.isInteger(v) && v >= min;
+  if (!int(d.cadence_days, 1)) return "Выпуск каждые N дней — целое число от 1";
+  for (const s of STAGES) if (!int(d[s + "_offset"], 0)) return `${META[s].n}: за сколько дней до выхода — целое число от 0`;
+  if (d.voice_days != null && !int(d.voice_days, 0)) return "Озвучка: дни после сценария — целое число от 0 или пусто";
+  return "";
 }
 
 // ---------- события ----------
@@ -1172,7 +1411,7 @@ const handlers = {
     ui.tab = el.dataset.tab;
     store("tab", ui.tab);
     // при каждом заходе — свежие цифры (пока грузятся, видны прежние)
-    if (ui.tab === "stats" && ui.stats) { ui.stats.key = ""; ui.statsError = null; }
+    if (ui.tab === "stats") { if (ui.stats) ui.stats.key = ""; ui.statsError = null; }
     window.scrollTo(0, 0);
     render();
   },
@@ -1196,10 +1435,13 @@ const handlers = {
   "open-episode": (el) => openSheet(episodeSheet(Number(el.dataset.id)), episodeNative(Number(el.dataset.id))),
   "ep-view": (el) => { ui.epView = el.dataset.v; store("epView", ui.epView); render(); },
   "toggle-waiting": () => { ui.showWaiting = !ui.showWaiting; render(); },
+  "toggle-onb": () => { store("onbCollapsed", store("onbCollapsed") === "1" ? "0" : "1"); render(); },
+  "now-all": (el) => { ui.nowAll = el.dataset.v === "1"; render(); },
+  "stats-retry": () => { ui.statsError = null; if (ui.stats) ui.stats.key = ""; render(); },
   "pick-color": (el) => { readProjectForm(); ui.draft.color = el.dataset.c; haptic("light"); ui.sheet.render(); },
   "close-sheet": () => closeSheet(),
   "new-episode": () => openNewEpisode(),
-  "done": (el) => act("tasks.done", { ids: el.dataset.ids.split(",").map(Number), done: true }, "✅ Отмечено"),
+  "done": (el) => markDone(el.dataset.ids.split(",").map(Number), el),
   "toggle": async (el) => {
     const t = S.tasks.find((x) => x.id === Number(el.dataset.id));
     if (!t) return;
@@ -1208,42 +1450,69 @@ const handlers = {
     } else if (!isActive(t)) {
       haptic("warning");
       toast("Сначала нужно закончить предыдущий этап");
-    } else act("tasks.done", { ids: [t.id], done: true }, "✅ Отмечено");
+    } else markDone([t.id], el);
   },
   "add-link": async (el) => {
     const url = document.getElementById("link-url").value.trim();
     if (!url) return toast("Вставь ссылку");
-    await act("link.add", { episode_id: Number(el.dataset.id), url, title: document.getElementById("link-title").value.trim(), stage: document.getElementById("link-stage").value }, "🔗 Добавлено");
+    await act("link.add", { episode_id: Number(el.dataset.id), url, title: document.getElementById("link-title").value.trim(), stage: document.getElementById("link-stage").value }, "🔗 Добавлено",
+      { el, commit: ["link-url", "link-title"] });
   },
   "open-link": (el, ev) => { ev.preventDefault(); openUrl(el.href); },
-  "del-link": async (el) => { if (await confirmBox("Удалить ссылку?")) act("link.delete", { id: Number(el.dataset.id) }); },
+  "del-link": async (el) => { if (await confirmBox("Удалить ссылку?")) act("link.delete", { id: Number(el.dataset.id) }, undefined, { el }); },
   "del-episode": async (el) => {
     if (await confirmBox("Удалить выпуск со всеми задачами? Посты в группе тоже удалятся. Пустую папку на Диске бот уберёт в корзину, папку с файлами — оставит.")) {
-      const r = await act("episode.delete", { id: Number(el.dataset.id) });
+      const r = await act("episode.delete", { id: Number(el.dataset.id) }, undefined, { el });
       if (!r) return;
       toast(r.folder === "kept" ? "Удалено. Папка на Диске оставлена — в ней есть файлы" : r.folder === "trashed" ? "Удалено, пустая папка — в корзине Диска" : "Удалено");
       closeSheet();
     }
   },
-  "create-episode": async () => {
+  "create-episode": async (el) => {
+    const st = ui.newEp;
     const title = document.getElementById("ne-title").value.trim();
     if (!title) return toast("Напиши название");
-    const r = await act("episode.create", {
+    // пустой код — шлём подсказанный сервером: повтор после таймаута упрётся в «Код занят», а не создаст второй выпуск.
+    // Исключение: папку нашли, но не берём — подсказка посчитана в расчёте, что выпуск займёт её номер; сервер назначит код сам, учтя папку как занятую
+    const skipHint = !!(st && st.folder && !st.useFolder);
+    const body = {
       project_id: Number(document.getElementById("ne-project").value), title,
-      code: document.getElementById("ne-code").value.trim() || undefined,
+      code: document.getElementById("ne-code").value.trim() || (!skipHint && st && st.serverCode) || undefined,
       publish_date: document.getElementById("ne-date").value || undefined,
-    }, "🎬 Выпуск создан: папка на Диске и пост в группе");
-    if (r) openSheet(episodeSheet(r.id), episodeNative(r.id));
+    };
+    if (st && st.folder && st.useFolder) body.drive_folder_id = st.folder.id;
+    const r = await act("episode.create", body, null, { el });
+    if (!r) return;
+    const e = ep(r.id);
+    toast(e ? "🎬 Выпуск создан: " + epLabel(e) : "🎬 Выпуск создан");
+    openSheet(episodeSheet(r.id), episodeNative(r.id));
   },
   "edit-project": (el) => openProject(Number(el.dataset.id)),
   "ch-add": () => { readProjectForm(); ui.draft.channels.push({ lang: "", name: "", youtube_url: "" }); ui.sheet.render(); },
-  "ch-del": (el) => { readProjectForm(); ui.draft.channels.splice(Number(el.dataset.i), 1); ui.sheet.render(); },
-  "save-project": async () => {
+  "ch-del": async (el) => {
+    readProjectForm();
+    const d = ui.draft, ch = d.channels[Number(el.dataset.i)];
+    if (!ch) return;
+    // удаление канала стирает его задачи выкладки во всех выпусках — без вопроса нельзя
+    if (ch.id) {
+      if (!(await confirmBox(delChannelText([ch])))) return;
+      (d.confirmedDel = d.confirmedDel || new Set()).add(ch.id);
+    }
+    d.channels.splice(d.channels.indexOf(ch), 1);
+    ui.sheet.render();
+  },
+  "save-project": async (el) => {
     readProjectForm();
     const d = ui.draft;
     if (!d.name.trim()) return toast("Нужно название");
+    const bad = projectFormError(d);
+    if (bad) return toast(bad);
     const channels = d.channels.filter((c) => c.lang).map((c) => ({ id: c.id, lang: c.lang, name: c.name || null, youtube_url: c.youtube_url || null }));
-    const r = await act("project.save", { ...d, color: d.color || d.autoColor, channels }, d.id ? "Сохранено" : "Проект создан");
+    // канал со стёртым названием языка тоже пропадёт — спрашиваем и про него
+    const gone = projChannels(d.id).filter((c) => !channels.some((x) => x.id === c.id) && !(d.confirmedDel && d.confirmedDel.has(c.id)));
+    if (gone.length && !(await confirmBox(delChannelText(gone)))) return;
+    const { confirmedDel, autoColor, ...payload } = d;
+    const r = await act("project.save", { ...payload, color: d.color || autoColor, channels }, d.id ? "Сохранено" : "Проект создан", { el });
     if (!r) return;
     if (!d.id && r.id) openProject(r.id); // сразу показать темы и каналы нового проекта
     else closeSheet();
@@ -1259,18 +1528,20 @@ const handlers = {
   },
   "topics-create": async (el) => {
     readProjectForm();
-    await act("topics.create_missing", { project_id: Number(el.dataset.id) }, "Темы созданы в группе");
+    await act("topics.create_missing", { project_id: Number(el.dataset.id) }, "Темы созданы в группе", { el });
   },
   "archive-project": async (el) => {
     if (await confirmBox("Архивировать проект? Его выпуски пропадут из списков и напоминаний.")) {
-      if (await act("project.archive", { id: Number(el.dataset.id) }, "Проект в архиве")) closeSheet();
+      if (await act("project.archive", { id: Number(el.dataset.id) }, "Проект в архиве", { el })) closeSheet();
     }
   },
-  "save-settings": () => act("settings.save", {
-    timezone: document.getElementById("set-tz").value.trim(),
-    morning_hour: Number(document.getElementById("set-morning").value),
-    evening_hour: Number(document.getElementById("set-evening").value),
-  }, "Сохранено"),
+  "save-settings": (el) => {
+    const hour = (id) => { const v = document.getElementById(id).value.trim(); return /^[0-9]+$/.test(v) ? Number(v) : null; };
+    const morning = hour("set-morning"), evening = hour("set-evening");
+    if (morning == null || evening == null || morning > 23 || evening > 23) return toast("Час — число от 0 до 23");
+    if (morning >= evening) return toast("Утро должно быть раньше вечера");
+    return act("settings.save", { timezone: document.getElementById("set-tz").value.trim(), morning_hour: morning, evening_hour: evening }, "Сохранено", { el });
+  },
   // своя шторка вместо window.prompt: prompt в Telegram на iOS и Android не показывается
   "rename": (el) => {
     const id = Number(el.dataset.id);
@@ -1286,7 +1557,7 @@ const handlers = {
   "rename-save": async (el) => {
     const name = document.getElementById("rn-name").value.trim();
     if (!name) return toast("Имя не может быть пустым");
-    if (await act("member.update", { tg_id: Number(el.dataset.id), name }, "Сохранено")) closeSheet();
+    if (await act("member.update", { tg_id: Number(el.dataset.id), name }, "Сохранено", { el })) closeSheet();
   },
 };
 
@@ -1294,7 +1565,11 @@ document.addEventListener("click", (ev) => {
   const el = ev.target.closest("[data-act]");
   if (!el || el.tagName === "SELECT") return;
   const h = handlers[el.dataset.act];
-  if (h) h(el, ev);
+  if (!h) return;
+  // асинхронный обработчик (подтверждение → запрос) не запускается второй раз, пока не закончил первый
+  if (el.dataset.pending) return;
+  const r = h(el, ev);
+  if (r && r.then) { el.dataset.pending = "1"; const clear = () => { delete el.dataset.pending; }; r.then(clear, clear); }
 });
 
 // ПК: Esc закрывает шторку, Enter в поле имени — сохраняет
@@ -1303,16 +1578,35 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key === "Enter" && ev.target.id === "rn-name") document.querySelector("#sheet [data-act='rename-save']").click();
 });
 
+// Набранное в форме нового выпуска сразу уходит в ui.newEp: перерисовка и ответы сервера его не трогают
+document.addEventListener("input", (ev) => {
+  const el = ev.target, st = ui.newEp;
+  if (ui.sheet && st && el.id && el.id.startsWith("ne-")) {
+    if (el.id === "ne-title") { st.title = el.value; paintNewEpisode(st); suggestSoon(st); }
+    if (el.id === "ne-code") { st.code = el.value; paintNewEpisode(st); }
+    if (el.id === "ne-date") { st.date = el.value; st.dateTouched = true; st.compressed = null; paintNewEpisode(st); suggestSoon(st); }
+  }
+  // перенос даты у существующего выпуска: предупреждение о сжатом графике сразу, до сохранения
+  if (ui.sheet && el.dataset && el.dataset.field === "publish_date") {
+    const e = ep(sheetEpisodeId()), box = document.getElementById("ep-compress");
+    if (e && box) box.innerHTML = compressNote(proj(e.project_id), el.value);
+  }
+});
+
+const sheetEpisodeId = () => { const b = document.querySelector("#sheet [data-act='del-episode']"); return b ? Number(b.dataset.id) : 0; };
+const FIELD_KEYS = { title: "f-title", code: "f-code", publish_date: "f-date", notes: "f-notes" };
+
 document.addEventListener("change", (ev) => {
   const el = ev.target;
-  if (el.id === "ne-date") el.dataset.touched = "1";
+  if (el.dataset.actChange === "ne-usefolder") { if (ui.newEp) { ui.newEp.useFolder = el.checked; paintNewEpisode(ui.newEp); } return; }
   if (el.dataset.actChange === "ne-project") {
     const pid = Number(el.value);
     const st = ui.newEp;
     st.project_id = pid;
-    st.title = document.getElementById("ne-title").value;
     st.codeHint = nextCode(pid);
-    ui.sheet.render();
+    st.serverCode = null; // номер другого проекта не годится — ждём новую подсказку
+    st.folder = null; st.compressed = null; st.useFolder = true;
+    renderSheet(); // название, код и дата живут в ui.newEp — смена проекта их не сбрасывает
     suggestDate(st);
     return;
   }
@@ -1334,8 +1628,10 @@ document.addEventListener("change", (ev) => {
     return;
   }
   if (el.dataset.field && ui.sheet) {
-    const id = Number(document.querySelector("#sheet [data-act='del-episode']").dataset.id);
-    act("episode.update", { id, [el.dataset.field]: el.value }, "Сохранено");
+    const id = sheetEpisodeId();
+    if (!id) return;
+    // после сохранения поле показывает то, что записал сервер (он может поправить код), а не набранное
+    act("episode.update", { id, [el.dataset.field]: el.value }, "Сохранено", { commit: [FIELD_KEYS[el.dataset.field]] });
   }
 });
 
@@ -1345,6 +1641,10 @@ async function start() {
     tg.ready();
     tg.expand();
     if (tg.initData) document.documentElement.classList.add("tg");
+    // вне Telegram библиотека всегда отвечает «light» — тогда тема идёт по prefers-color-scheme
+    const applyScheme = () => { if (tg.initData && tg.colorScheme) document.documentElement.dataset.scheme = tg.colorScheme; };
+    applyScheme();
+    if (tg.onEvent) tg.onEvent("themeChanged", applyScheme);
     if (tg.BackButton) tg.BackButton.onClick(closeSheet);
     // кнопки внизу экрана Telegram: один обработчик, действие — по текущему экрану
     if (hasMain()) { tg.MainButton.onClick(() => { haptic("light"); nativeNow.main && nativeNow.main.run(); }); document.documentElement.classList.add("has-main"); }
@@ -1386,17 +1686,25 @@ if (FAKE_NATIVE) {
   const mk = (id) => {
     const b = document.createElement("button");
     b.id = id; b.className = "btn"; b.style.cssText = "flex:1;display:none;padding:13px"; bar.appendChild(b);
-    let cb = null, params = {};
+    let cb = null, params = {}, progress = false;
     return {
-      setParams(p) { Object.assign(params, p); b.textContent = params.text || ""; b.style.display = params.is_visible ? "block" : "none"; if (id === "fake-second") b.classList.add("ghost"); },
+      setParams(p) { Object.assign(params, p); b.textContent = params.text || ""; b.style.display = params.is_visible ? "block" : "none"; if (id === "fake-second") b.classList.add("ghost"); b.disabled = !!progress; },
       hide() { params.is_visible = false; b.style.display = "none"; },
+      // как у настоящей кнопки: во время запроса — индикатор и нажатия не проходят
+      showProgress() { progress = true; b.disabled = true; b.dataset.progress = "1"; },
+      hideProgress() { progress = false; b.disabled = false; delete b.dataset.progress; },
       onClick(fn) { cb = fn; b.onclick = () => cb && cb(); },
     };
   };
   const second = mk("fake-second"), main = mk("fake-main");
   // у настоящего Telegram.WebApp эти свойства только для чтения — объявляем свои поверх
   const fake = Object.create(tg || {});
-  for (const [k, v] of Object.entries({ MainButton: main, SecondaryButton: second, initData: "", isVersionAtLeast: () => false })) {
+  // &tgver=7.0 — клиент старше 7.10: SecondaryButton не рисуется, «📁 Папка» должна остаться на странице
+  const noop = () => {};
+  for (const [k, v] of Object.entries({
+    MainButton: main, SecondaryButton: second, initData: "", isVersionAtLeast: (v) => FAKE_VER >= Number(v),
+    disableVerticalSwipes: noop, setHeaderColor: noop, setBackgroundColor: noop, setBottomBarColor: noop, ready: noop, expand: noop, onEvent: noop,
+  })) {
     Object.defineProperty(fake, k, { value: v });
   }
   tg = fake;
