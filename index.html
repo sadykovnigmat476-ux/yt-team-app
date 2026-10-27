@@ -378,10 +378,19 @@ function epHead(e) {
 function epLabel(e, mode = "full") {
   const p = proj(e.project_id) || { emoji: "", name: "" };
   if (mode === "short") return `${p.emoji} ${e.code}`;
-  return epHead(e) + (e.title ? ` «${e.title}»` : "");
+  const tag = formatTag(e.notes);
+  return epHead(e) + (e.title ? ` «${e.title}»` : "") + (tag ? ` · ${tag}` : "");
 }
-/** HTML-строка выпуска: жирная голова + название (для карточек и списков). */
-const epHtml = (e) => `<b>${esc(epHead(e))}</b> ${esc(e.title)}`;
+/** 2D или 3D (Blender) из заметок выпуска — зеркало formatTag на сервере. */
+function formatTag(notes) {
+  const m = (notes || "").match(/(?:^|[^a-z0-9])([23])d(?![a-z0-9])/i);
+  return m ? `${m[1]}D` : null;
+}
+/** HTML-строка выпуска: жирная голова + название (для карточек и списков) + 2D/3D. */
+const epHtml = (e) => {
+  const tag = formatTag(e.notes);
+  return `<b>${esc(epHead(e))}</b> ${esc(e.title)}${tag ? ` <span class="muted">· ${tag}</span>` : ""}`;
+};
 /** Для нижней кнопки Telegram: проект и код без названия — иначе кнопка не помещается. */
 function epBtn(e) {
   const p = proj(e.project_id) || { emoji: "", name: "" };
