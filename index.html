@@ -1085,7 +1085,8 @@ function viewSettings() {
     html += `<div class="card pc-stripe ${admin ? "clickable" : ""}" style="${pc(p)}" ${admin ? `data-act="edit-project" data-id="${p.id}"` : ""}>
       <div class="row"><div class="grow"><b>${esc(p.emoji)} ${esc(p.name)}</b><div class="muted">${chs.map((c) => esc(langTag(c.lang))).join(" · ") || "нет каналов"}</div>
       <div class="muted">${roles}</div>
-      <div class="muted">${p.drive_folder_id ? "📁 Диск ✅" : "📁 Диск: папка не задана"} · Темы: ${topicStatus(p)}</div></div>${admin ? "›" : ""}</div></div>`;
+      <div class="muted">${p.drive_folder_id ? "📁 Диск ✅" : "📁 Диск: папка не задана"} · Темы: ${topicStatus(p)}</div>
+      ${p.linked || p.runner_enabled ? `<div class="muted">${[p.linked ? "🔗 папка на ПК связана" : "", p.runner_enabled ? "🤖 робот на ПК включён" : ""].filter(Boolean).join(" · ")}</div>` : ""}</div>${admin ? "›" : ""}</div></div>`;
   }
   if (admin) html += `<button class="btn ghost block" data-act="edit-project" data-id="0">+ Новый проект</button>`;
 
@@ -1272,10 +1273,13 @@ function nextCode(pid) {
   return "S" + String(max + 1).padStart(2, "0");
 }
 
+const newRequestId = () => (window.crypto && crypto.randomUUID ? crypto.randomUUID() : `r${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
+
 /** Форма хранит всё набранное в ui.newEp: ответ сервера и смена проекта её не затирают. */
 async function openNewEpisode() {
   const pid = ui.project !== "all" ? Number(ui.project) : S.projects[0].id;
-  const state = { project_id: pid, title: "", code: "", date: "", dateTouched: false, codeHint: nextCode(pid), folder: null, useFolder: true, compressed: null, seq: 0 };
+  // requestId — ключ этого запроса «Создать»: повтор после «Нет связи» сервер узнаёт и отдаёт уже созданный выпуск
+  const state = { project_id: pid, title: "", code: "", date: "", dateTouched: false, codeHint: nextCode(pid), folder: null, useFolder: true, compressed: null, seq: 0, requestId: newRequestId() };
   ui.newEp = state;
   openSheet(newEpisodeSheet(state), () => ({ main: { text: "Создать выпуск", run: () => handlers["create-episode"]() } }));
   await suggestDate(state);
@@ -1330,6 +1334,7 @@ function projectSheet(draft) {
       <div class="grid4" style="margin-top:4px">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><input class="inp" type="number" min="0" data-pf="${s}_offset" value="${draft[s + "_offset"]}"></label>`).join("")}</div>
     </div>
     ${isNew ? "" : topicsSection(draft.id)}
+    ${isNew ? "" : pcSection(draft)}
     <h2>Ответственные</h2><div class="card">${STAGES.map((s) => `<label class="f"><span>${META[s].e} ${META[s].n}</span><select class="inp" data-role="${s}">${memberOptions(draft.roles[s])}</select></label>`).join("")}
       <div class="muted small">Незакрытые задачи прежнего ответственного перейдут новому.</div></div>
     <h2>Языковые каналы</h2><div class="card">
@@ -1372,6 +1377,14 @@ function openProject(id) {
   }
 }
 
+/** Связь с папкой проекта на ПК (ytbot) и «робот», который сам делает готовые к монтажу выпуски. */
+function pcSection(draft) {
+  return `<h2>💻 Папка на ПК</h2><div class="card">
+    <div>${draft.linked ? "🔗 папка на ПК связана" : `<span class="muted">Папка на ПК не связана — в папке проекта: <code style="user-select:all">ytbot link ${draft.id}</code></span>`}</div>
+    <label class="note" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" data-pf="runner_enabled" ${draft.runner_enabled ? "checked" : ""}>
+      <span>🤖 Робот на ПК<br><span class="muted small">Сам берёт выпуск, готовый к монтажу, скачивает сценарии и озвучку и запускает Claude в папке проекта (<code>ytbot run</code>). Озвучку не заказывает. По умолчанию выключен.</span></span></label></div>`;
+}
+
 function topicsSection(pid) {
   const gt = S.group_topics || [];
   const owner = (thread) => {
@@ -1397,7 +1410,8 @@ function topicsSection(pid) {
 function readProjectForm() {
   const d = ui.draft;
   document.querySelectorAll("#sheet [data-pf]").forEach((el) => {
-    if (el.type !== "number") d[el.dataset.pf] = el.value;
+    if (el.type === "checkbox") d[el.dataset.pf] = el.checked;
+    else if (el.type !== "number") d[el.dataset.pf] = el.value;
     else d[el.dataset.pf] = el.value === "" ? (el.dataset.pf === "voice_days" ? null : "") : Number(el.value);
   });
   document.querySelectorAll("#sheet [data-role]").forEach((el) => { d.roles[el.dataset.role] = el.value ? Number(el.value) : null; });
@@ -1496,6 +1510,7 @@ const handlers = {
       publish_date: document.getElementById("ne-date").value || undefined,
     };
     if (st && st.folder && st.useFolder) body.drive_folder_id = st.folder.id;
+    if (st && st.requestId) body.request_id = st.requestId;
     const r = await act("episode.create", body, null, { el });
     if (!r) return;
     const e = ep(r.id);
