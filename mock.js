@@ -13,7 +13,7 @@
       { tg_id: 2, name: "Павел", username: "pavel", is_admin: false, can_dm: false },
     ],
     projects: [
-      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1 },
+      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1, local_dir: "F:/Скрытая физика", runner_enabled: false },
       { id: 2, name: "Тактика Боя", emoji: "⚔️", thread_id: 12, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 2 },
       { id: 3, name: "Channel #1", emoji: "🪐", thread_id: null, cadence_days: 4, script_offset: 6, voice_offset: 4, edit_offset: 2, upload_offset: 0, sort: 3 },
     ],
@@ -81,12 +81,15 @@
 
   /** raw — как у выпусков, созданных давно: сроки по оффсетам без сжатия (демо-просрочка). */
   function createEpisode(b, raw) {
+    // ключ запроса формы: повтор «Создать» после «Нет связи» — тот же выпуск, без новых задач
+    const dup = b.request_id && st.episodes.find((x) => x.client_request_id === b.request_id);
+    if (dup) return dup;
     const p = proj(b.project_id);
     const code = b.code ? normCode(b.code) : nextCode(p, b.drive_folder_id);
     assertCodeFree(p, code);
     const orphan = b.drive_folder_id && orphans.find((o) => o.id === b.drive_folder_id);
     if (orphan) orphans = orphans.filter((o) => o !== orphan);
-    const e = { id: eid++, project_id: p.id, drive_folder_id: b.drive_folder_id || "demo" + eid, code, title: b.title, publish_date: b.publish_date || add(today, 7), notes: null };
+    const e = { id: eid++, project_id: p.id, drive_folder_id: b.drive_folder_id || "demo" + eid, code, title: b.title, publish_date: b.publish_date || add(today, 7), notes: null, client_request_id: b.request_id || null };
     st.episodes.push(e);
     const sc = raw ? Object.fromEntries(STAGES.map((s) => [s, dueFor(p, s, e.publish_date)])) : scheduleFor(p, e.publish_date);
     for (const s of STAGES) {
@@ -134,7 +137,8 @@
   window.MOCK_API = async function (action, b) {
     await new Promise((r) => setTimeout(r, 120));
     switch (action) {
-      case "state": return clone({ ...st, today });
+      // как на сервере: путь папки на ПК участникам не отдаётся — только признак linked
+      case "state": return clone({ ...st, today, projects: st.projects.map(({ local_dir, ...p }) => ({ ...p, linked: !!local_dir })) });
       case "episode.suggest": {
         const p = proj(b.project_id);
         const last = st.episodes.filter((e) => e.project_id === p.id).map((e) => e.publish_date).sort().pop();
@@ -190,7 +194,9 @@
         if (b.voice_days != null && !int(b.voice_days, 0)) throw new Error("Озвучка после сценария — целое число от 0 или пусто");
         let p = st.projects.find((x) => x.id === b.id);
         if (!p) { p = { id: Math.max(...st.projects.map((x) => x.id)) + 1, thread_id: null }; st.projects.push(p); }
+        if (!st.me.is_admin) throw new Error("Только для админа команды");
         for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days", "color"]) p[k] = b[k];
+        if (b.runner_enabled !== undefined) p.runner_enabled = !!b.runner_enabled;
         p.drive_folder_id = (String(b.drive_folder || "").match(/folders\/([\w-]+)/) || [])[1] || null;
         const removed = st.channels.filter((c) => c.project_id === p.id && !b.channels.some((x) => x.id === c.id)).map((c) => c.id);
         st.channels = st.channels.filter((c) => !removed.includes(c.id));
