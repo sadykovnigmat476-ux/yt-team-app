@@ -138,7 +138,7 @@
   createEpisode({ project_id: 2, title: "Фаланга против легиона", publish_date: add(today, 13) }, true);
   void e2;
 
-  // ---- пульт робота: зеркало контракта robot.state / robot.pause / robot.project / robot.episode ----
+  // ---- пульт робота: зеркало контракта robot.state / robot.pause / robot.project / robot.episode / robot.until ----
   // &nopulse=1 — у идущей прогонки пульс старше 15 минут (красное «нет пульса»); &emptyrobot=1 — пустое состояние без проектов и выпусков
   const MIN = 60000, HOUR = 60 * MIN;
   const qsm = new URLSearchParams(location.search);
@@ -163,7 +163,21 @@
     { id: 5, pid: 2, label: "⚔️ Тактика Боя · S07 «Фаланга против легиона» · 3D", code: "S07", pub: add(today, 5), kind: "waitnight", hold: false, until: null },
     { id: 6, pid: 1, label: "🔭 Скрытая Физика · S06 «Почему небо синее»", code: "S06", pub: add(today, 8), kind: "voicewait", hold: true, until: null },
     { id: 7, pid: 2, label: "⚔️ Тактика Боя · S05 «Битва при Каннах»", code: "S05", pub: add(today, 2), kind: "failed", hold: false, until: null },
+    // «Робот ведёт до: Озвучка» — сценарий и озвучку сделал робот, монтаж твой
+    { id: 8, pid: 1, label: "🔭 Скрытая Физика · S07 «Почему лёд скользкий»", code: "S07", pub: add(today, 6), kind: "limit", hold: false, until: null, own: "voice" },
   ];
+  // «Робот ведёт до»: own — свой предел выпуска (null — как у проекта), rbUntil — предел проекта (null — «Конец»)
+  const UNTILS = ["script", "voice", "montage", "end"];
+  const PHASES = ["script", "voice", "montage", "changes", "final"];
+  const UNTIL_LAST = { script: 0, voice: 1, montage: 3, end: 4 };
+  const UNTIL_GEN = { script: "сценария", voice: "озвучки", montage: "монтажа", end: "конца" };
+  const PHASE_NAME = { script: "сценарий", voice: "озвучка", montage: "монтаж", changes: "правки", final: "финал" };
+  const rbUntil = {};
+  const untilOf = (m) => m.own || rbUntil[m.pid] || "end";
+  const allowedPhase = (ph, u) => PHASES.indexOf(ph) <= UNTIL_LAST[u];
+  // следующая фаза, которую робот взял бы (null — идёт, ждёт проверки или ждёт файлов)
+  const NEXT_PHASE = { waitnight: "montage", failed: "montage", stopped: "montage", limit: "montage" };
+  const STEP_PHASE = { script: "script", voice: "voice", montage: "montage", review: "montage", changes: "changes", final: "final" };
   const rbDone = [{ id: 4, pid: 1, label: "🔭 Скрытая Физика · S04 «Ньютон и яблоко: что было на самом деле»", code: "S04", pub: add(today, -2) }];
   const MODEL = { model: "claude-opus-5-5", model_label: "Opus 5.5" };
   const heartbeat = () => (qsm.has("nopulse") ? isoAgo(23) : isoAgo(((Date.now() / 1000) % 150) / 60));
@@ -175,6 +189,7 @@
       case "review": return { ...base, phase: "montage", part: 3, status: "review", started_at: isoAgo(380), heartbeat_at: isoAgo(330), note: "Монтаж готов, стоп-кадры отправлены в личку владельцу." };
       case "stopped": return { ...base, phase: "montage", part: 3, status: "stopped", started_at: isoAgo(70), heartbeat_at: isoAgo(3), note: "остановил владелец" };
       case "failed": return { ...base, phase: "montage", part: 1, status: "failed", started_at: isoAgo(420), heartbeat_at: isoAgo(400), note: FAIL_NOTE };
+      case "limit": return { ...base, phase: "voice", part: 1, status: "done", started_at: isoAgo(1500), heartbeat_at: isoAgo(1490), note: "Озвучка заказана и принята." };
       case "waitnight": return { ...base, phase: "voice", part: 1, status: "done", host: "NIGMAT-PC", model: null, model_label: "модель не указана", started_at: isoAgo(900), heartbeat_at: isoAgo(890), note: "Озвучка заказана и принята." };
       default: return null;
     }
@@ -194,11 +209,21 @@
       case "waitnight": return steps({ ...front, montage: ["wait", allowed ? "днём разрешено" : "ждёт ночи 1:00–8:00"], review: todo, changes: todo, final: todo, upload: todo });
       case "voicewait": return steps({ script: ["done", "5 языков"], voice: ["wait", "ждёт озвучку: 2 из 5"], montage: todo, review: todo, changes: todo, final: todo, upload: todo });
       case "failed": return steps({ ...front, montage: ["fail", "нет стоп-кадров"], review: todo, changes: todo, final: todo, upload: todo });
+      case "limit": return steps({ ...front, montage: ["wait"], review: todo, changes: todo, final: todo, upload: todo });
       default: return [];
     }
   }
+  /** Следующая фаза за пределом — «дальше твоё» (как robotLimit на сервере); иначе null. */
+  const limitOf = (m) => {
+    const ph = NEXT_PHASE[m.kind];
+    const u = untilOf(m);
+    return ph && !allowedPhase(ph, u) ? { phase: ph, until: u } : null;
+  };
   function rbWhere(m, allowed, nowIso) {
     if (m.hold) return { where: "⏸ остановлен тобой", tone: "stop" };
+    const lim = limitOf(m);
+    if (lim) return { where: `✋ дальше твоё: ${PHASE_NAME[lim.phase]} (робот ведёт до ${UNTIL_GEN[lim.until]})`, tone: "stop" };
+    if (m.kind === "limit") return { where: "⏳ возьмёт при следующем заходе: монтаж", tone: "wait" };
     if (rb.paused) return { where: "⏸ робот остановлен — выпуск ждёт запуска", tone: "stop" };
     switch (m.kind) {
       case "running": return { where: "🤖 делает: монтаж, часть 3 · ПК NIGMAT-PC", tone: "work" };
@@ -213,15 +238,23 @@
   function rbPanelEp(m) {
     const allowed = !!m.until && Date.parse(m.until) > Date.now();
     const w = rbWhere(m, allowed);
+    const u = untilOf(m);
+    // шаги за пределом робота — «вручную» (как robotTrack на сервере)
+    const track = rbTrack(m, allowed, rb.paused).map((x) => {
+      const ph = STEP_PHASE[x.key];
+      return ph && !allowedPhase(ph, u) && !x.detail ? { ...x, detail: "вручную" } : x;
+    });
     return {
       id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: m.hold, now_until: allowed ? m.until : null,
-      ...w, track: rbTrack(m, allowed, rb.paused), run: rbRun(m),
+      robot_until: u, robot_until_own: m.own || null,
+      ...w, track, run: rbRun(m),
     };
   }
   function rbDoneEp(m) {
     const S = (key, title, state, detail = null) => ({ key, title, state, detail });
     return {
-      id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: false, now_until: null, where: "✅ выложен " + m.pub, tone: "done",
+      id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: false, now_until: null, robot_until: rbUntil[m.pid] || "end", robot_until_own: null,
+      where: "✅ выложен " + m.pub, tone: "done",
       track: [S("topic", "Тема", "done", m.code), S("script", "Сценарий", "done"), S("voice", "Озвучка", "done", "5 из 5"), S("montage", "Монтаж", "done", "2 части"),
         S("review", "Проверка", "done"), S("changes", "Правки", "skip", "правок не было"), S("final", "Финал", "done", "заход 1 из 12"), S("upload", "Выкладка", "done", m.pub)],
       run: { id: 99, phase: "final", part: 1, status: "done", host: "NIGMAT-PC", ...MODEL, started_at: isoAgo(3000), heartbeat_at: isoAgo(2990), log_tail: null, log_at: null, note: "Финал собран, ролик залит на Диск." },
@@ -235,7 +268,7 @@
     return {
       paused: rb.paused, owner: { tg_id: 1, name: "Нигмат" }, now: new Date().toISOString(), night: h >= 1 && h < 8, night_window: "1:00–8:00",
       pc_seen_at: qsm.has("emptyrobot") ? null : isoAgo(rb.seen),
-      projects: st.projects.map((p) => ({ id: p.id, name: p.name, runner_enabled: !!p.runner_enabled, linked: !!p.local_dir, seen_at: p.local_dir && !qsm.has("emptyrobot") ? isoAgo(rb.seen + p.id) : null })),
+      projects: st.projects.map((p) => ({ id: p.id, name: p.name, runner_enabled: !!p.runner_enabled, linked: !!p.local_dir, seen_at: p.local_dir && !qsm.has("emptyrobot") ? isoAgo(rb.seen + p.id) : null, robot_until: rbUntil[p.id] || null })),
       episodes: eps, done: dn,
     };
   }
@@ -265,6 +298,23 @@
         else if (b.op === "now") { m.until = new Date(Date.now() + 12 * HOUR).toISOString(); m.hold = false; if (m.kind === "stopped") m.kind = "waitnight"; }
         else if (b.op === "night") m.until = null;
         else throw new Error("Неизвестная операция");
+        return { ok: true };
+      }
+      case "robot.until": {
+        const v = b.until ?? null;
+        if (v !== null && !UNTILS.includes(v)) throw new Error("until: " + UNTILS.join(", ") + " или null");
+        if (b.episode_id != null) {
+          const m = rbEps.find((x) => x.id === Number(b.episode_id));
+          if (!m) throw new Error("Выпуск " + b.episode_id + " не найден");
+          m.own = v;
+          return { ok: true };
+        }
+        const p = proj(Number(b.project_id));
+        if (!p) throw new Error("Проект " + b.project_id + " не найден");
+        const prev = rbUntil[p.id] || "end";
+        // живые выпуски без своего предела сохраняют прежний предел проекта своим; новый — только для новых
+        if (prev !== (v || "end")) for (const m of rbEps) if (m.pid === p.id && !m.own) m.own = prev;
+        rbUntil[p.id] = v;
         return { ok: true };
       }
     }
