@@ -92,6 +92,10 @@
   nav button.on span { filter: none; opacity: 1; }
   nav button.add span { filter: none; opacity: 1; width: 46px; height: 30px; border-radius: 12px; display: grid; place-items: center; background: var(--accent); color: var(--accent-text); font-size: 24px; font-weight: 500; }
   nav button.add { color: var(--accent); }
+  /* семь кнопок (у владельца есть «🤖»): шрифт мельче, подписи не вылезают за свою долю ширины */
+  nav .in.many button { font-size: 10px; letter-spacing: -.01em; padding-left: 1px; padding-right: 1px; overflow: hidden; }
+  nav .in.many button span { font-size: 19px; }
+  nav .in.many button.add span { width: 40px; }
   @media (hover: hover) { nav button:hover { color: var(--text); } .btn:hover { filter: brightness(1.06); } }
 
   .cal-head { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 8px; }
@@ -241,6 +245,47 @@
   .kcard .mt { display: flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; color: var(--hint); }
   .mini-ava { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--accent-bg); color: var(--accent); }
   .col-empty { color: var(--hint); font-size: 12.5px; text-align: center; padding: 18px 6px; }
+  /* Пульт робота (только владелец) */
+  .rb-head .state { font-size: 18px; font-weight: 700; }
+  .rb-head .state.off { color: var(--hint); }
+  .rb-meta { margin-top: 6px; display: grid; gap: 2px; }
+  .rb-bad { color: var(--danger); font-weight: 600; }
+  .rb-bad code { font-weight: 400; }
+  .rb-ep { overflow: hidden; }
+  .rb-where { --tone: var(--hint); border-radius: 10px; padding: 7px 10px 7px 14px; margin: 8px 0 6px; font-size: 14px; font-weight: 600; word-break: break-word;
+    background: color-mix(in srgb, var(--tone) 14%, transparent); box-shadow: inset 4px 0 0 var(--tone); }
+  .rb-where.work { --tone: var(--accent); }
+  .rb-where.wait { --tone: var(--hint); }
+  .rb-where.owner { --tone: var(--warn); }
+  .rb-where.fail { --tone: var(--danger); }
+  .rb-where.stop { --tone: var(--hint); }
+  .rb-where.done { --tone: var(--ok); }
+  .rb-steps { margin: 4px 0; }
+  .rb-step { display: grid; grid-template-columns: 20px minmax(0, 1fr) minmax(0, 52%); gap: 8px; align-items: center; padding: 3px 0; font-size: 13px; }
+  .rb-step .mk { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; line-height: 1; font-weight: 700; background: var(--sep); color: var(--hint); }
+  .rb-step.done .mk { background: var(--ok); color: #fff; }
+  .rb-step.active .mk { background: var(--accent); color: var(--accent-text); animation: rb-pulse 1.6s ease-in-out infinite; }
+  .rb-step.wait .mk { background: var(--warn); color: #fff; }
+  .rb-step.fail .mk { background: var(--danger); color: #fff; }
+  .rb-step.skip .mk { background: none; box-shadow: inset 0 0 0 1px var(--sep); }
+  .rb-step.todo .nm, .rb-step.skip .nm { color: var(--hint); }
+  .rb-step.active .nm { font-weight: 700; }
+  .rb-step .dt { font-size: 12px; color: var(--hint); text-align: right; overflow-wrap: anywhere; }
+  .rb-step.fail .dt { color: var(--danger); }
+  @keyframes rb-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); } 50% { box-shadow: 0 0 0 5px transparent; } }
+  @media (prefers-reduced-motion: reduce) { .rb-step.active .mk { animation: none; } }
+  .rb-run { border-top: 1px solid var(--sep); margin-top: 6px; padding-top: 7px; font-size: 13px; }
+  .rb-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .rb-log { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--bg2); font: 12px/1.4 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
+  .sw { position: relative; flex: none; width: 46px; height: 28px; border: 0; border-radius: 999px; background: var(--sep); cursor: pointer; transition: background .15s; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+  .sw.on { background: var(--ok); }
+  .sw.on::after { transform: translateX(18px); }
+  .sw:disabled { opacity: .5; }
+  @media (min-width: 760px) {
+    .rb-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 8px; align-items: start; }
+    .rb-list > .card { margin-bottom: 0; }
+  }
   @media (min-width: 760px) {
     .board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); overflow: visible; margin: 0; padding: 2px 0 12px; }
     .col { flex: none; }
@@ -289,6 +334,13 @@ const TABS = [
   { id: "stats", e: "📊", n: "Статистика" },
   { id: "settings", e: "⚙️", n: "Настройки" },
 ];
+// «🤖 Робот» — пульт, виден только владельцу (S.me.is_owner)
+const ROBOT_TAB = { id: "robot", e: "🤖", n: "Робот" };
+const ROBOT_POLL_MS = 30000;
+const FINAL_MAX_PARTS = 12; // зеркало domain.ts: потолок заходов финала
+const RUN_STALE_MIN = 15; // зеркало RUN_STALE_MS: дольше без пульса — «нет пульса»
+const PHASE_RU = { script: "сценарий", voice: "озвучка", montage: "монтаж", changes: "правки", final: "финал" };
+const RUN_RU = { running: "идёт", review: "ждёт проверки", done: "готово", failed: "упала", stopped: "остановлена" };
 
 // Цвета проектов: свой (выбирается в настройках проекта) или из палитры по порядку
 const PALETTE = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
@@ -299,6 +351,8 @@ const ui = {
   statsDays: Number(store("statsDays")) || 30, stats: null, statsLoading: null, statsError: null,
   epView: store("epView") || "board", showWaiting: true, hero: null,
   nowAll: false, newEp: null, skipKeep: null,
+  // пульс робота: data — ответ robot.state, at — когда пришёл, fresh — свежее ли для открытого захода во вкладку
+  robot: { data: null, at: 0, error: null, loading: false, fresh: false, logs: new Set(), showDone: false },
 };
 
 function store(k, v) {
@@ -590,13 +644,18 @@ const kp = (key) => ` data-keep="${key}"`;
 
 function render() {
   const snap = snapKeep();
-  const tabs = TABS.map((t) =>
+  const owner = !!S.me.is_owner;
+  // вкладка робота помнится в localStorage, но чужому (не владельцу) её нет — уходим на «Мои дела»
+  if (ui.tab === "robot" && !owner) ui.tab = "my";
+  const tabs = (owner ? [...TABS, ROBOT_TAB] : TABS).map((t) =>
     `<button class="${ui.tab === t.id ? "on" : ""}" data-act="tab" data-tab="${t.id}"><span>${t.e}</span>${t.n}</button>`);
   // «+» посередине панели: всегда под пальцем и не перекрывает карточки
   if (S.projects.length) tabs.splice(2, 0, `<button class="add" data-act="new-episode" aria-label="Новый выпуск"><span>+</span>Выпуск</button>`);
-  document.getElementById("tabs").innerHTML = tabs.join("");
+  const tabsEl = document.getElementById("tabs");
+  tabsEl.classList.toggle("many", tabs.length >= 7);
+  tabsEl.innerHTML = tabs.join("");
   const v = document.getElementById("view");
-  v.innerHTML = ({ my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, stats: viewStats, settings: viewSettings }[ui.tab] || viewMy)();
+  v.innerHTML = ({ my: viewMy, episodes: viewEpisodes, calendar: viewCalendar, stats: viewStats, settings: viewSettings, robot: viewRobot }[ui.tab] || viewMy)();
   if (ui.sheet) ui.sheet.render();
   restoreKeep(snap);
   syncNative();
@@ -1056,6 +1115,167 @@ function statsHealth(d) {
     <div class="muted small" style="margin-top:6px">Если что-то ломается, бот сам пишет админам в личку.</div></div>`;
 }
 
+// --- Пульт робота (владелец): все выпуски робота от темы до выкладки
+let robotSeq = 0;
+
+/** Читает robot.state. Ответ на устаревший запрос после более нового отбрасывается; при ошибке прежние данные остаются. */
+async function loadRobot() {
+  const r = ui.robot, seq = ++robotSeq;
+  r.loading = true;
+  const btn = document.querySelector("[data-act='robot-refresh']");
+  if (btn) btn.classList.add("is-busy");
+  try {
+    const data = await api("robot.state");
+    if (seq !== robotSeq) return;
+    Object.assign(r, { data, at: Date.now(), error: null, fresh: true });
+  } catch (e) {
+    if (seq !== robotSeq) return;
+    r.error = e.message;
+  } finally {
+    if (seq === robotSeq) { r.loading = false; if (ui.tab === "robot" && S && S.me.is_owner) render(); }
+  }
+}
+
+// автообновление: раз в 30 с, пока вкладка пульта открыта и страница видна (не в фоне)
+setInterval(() => {
+  if (ui.tab === "robot" && S && S.me.is_owner && document.visibilityState === "visible" && !busy && !ui.sheet && !ui.robot.loading) loadRobot();
+}, ROBOT_POLL_MS);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && ui.tab === "robot" && S && S.me.is_owner && !ui.robot.loading && Date.now() - ui.robot.at >= ROBOT_POLL_MS) loadRobot();
+});
+
+/** Действие пульта: через act() (замок, тост, ошибка), затем пульт перечитывается. */
+async function robotAct(action, body, msg, el) {
+  const res = await act(action, body, msg, { el });
+  if (res) loadRobot();
+  return res;
+}
+
+/** «2 мин назад» / «3 ч назад» по разнице в миллисекундах. */
+function agoText(ms) {
+  const m = Math.max(0, Math.floor(ms / 60000));
+  if (m < 1) return "только что";
+  if (m < 60) return `${m} мин назад`;
+  const h = Math.floor(m / 60);
+  return h < 48 ? `${h} ч назад` : `${Math.floor(h / 24)} дн. назад`;
+}
+/** Время «ЧЧ:ММ» в поясе команды; с пометкой «завтра», если это уже другой день. */
+function clockText(iso, nowMs) {
+  const tz = (S.settings && S.settings.timezone) || undefined;
+  const pick = (t, o) => { try { return new Date(t).toLocaleString("ru", { timeZone: tz, ...o }); } catch (_) { return new Date(t).toLocaleString("ru", o); } };
+  const hm = pick(Date.parse(iso), { hour: "2-digit", minute: "2-digit" });
+  const sameDay = pick(Date.parse(iso), { day: "numeric", month: "numeric" }) === pick(nowMs, { day: "numeric", month: "numeric" });
+  return sameDay ? hm : `${hm} (завтра)`;
+}
+
+function robotStep(s) {
+  const st = ["done", "active", "wait", "fail", "todo", "skip"].includes(s.state) ? s.state : "todo";
+  const mark = { done: "✓", active: "●", wait: "…", fail: "✕", todo: "", skip: "–" }[st];
+  return `<div class="rb-step ${st}"><span class="mk">${mark}</span><span class="nm">${esc(s.title)}</span><span class="dt">${s.detail ? esc(s.detail) : ""}</span></div>`;
+}
+
+/** Блок идущей (или последней) прогонки: фаза, часть, ПК, модель, пульс. */
+function robotRun(run, nowMs) {
+  const phase = PHASE_RU[run.phase] || run.phase;
+  const part = run.phase === "final" ? ` · заход ${Number(run.part) || 1} из ${FINAL_MAX_PARTS}` : Number(run.part) > 1 || run.phase === "montage" ? ` · часть ${Number(run.part) || 1}` : "";
+  let pulse = "";
+  if (run.status === "running") {
+    const at = Date.parse(run.heartbeat_at || run.started_at);
+    const mins = Number.isFinite(at) ? (nowMs - at) / 60000 : 0;
+    if (mins > RUN_STALE_MIN) pulse = ` · <span class="rb-bad">нет пульса${run.heartbeat_at ? " · " + agoText(nowMs - at) : ""}</span>`;
+    else pulse = run.heartbeat_at ? ` · пульс ${esc(agoText(nowMs - at))}` : " · пульса ещё нет";
+  }
+  return `<div class="rb-run"><div class="row"><b class="grow">🤖 ${esc(phase)}${part}</b><span class="badge ${run.status === "running" ? "ok" : run.status === "failed" ? "late" : run.status === "review" ? "today" : ""}">${esc(RUN_RU[run.status] || run.status)}</span></div>
+    <div class="muted">${run.host ? "ПК " + esc(run.host) : "ПК не указан"} · ${esc(run.model_label || "модель не указана")}${pulse}</div></div>`;
+}
+
+function robotLog(e, nowMs) {
+  const run = e.run;
+  const running = run.status === "running";
+  const text = running ? run.log_tail : run.note;
+  const when = running && run.log_at ? `<div class="muted small" style="margin-top:6px">Журнал обновлён ${esc(agoText(nowMs - Date.parse(run.log_at)))}</div>` : "";
+  const body = text ? esc(text) : running ? "Журнал пока пуст — строки приходят раз в минуту." : "У этой прогонки нет записи об итоге.";
+  return `${when}<pre class="rb-log">${body}</pre>`;
+}
+
+function robotEpisode(e, nowMs, withActs) {
+  const p = proj(e.project_id);
+  const tone = ["work", "wait", "owner", "fail", "stop", "done"].includes(e.tone) ? e.tone : "wait";
+  const allowed = e.now_until && Date.parse(e.now_until) > nowMs;
+  const running = !!(e.run && e.run.status === "running");
+  const hasLog = !!e.run;
+  const logOpen = ui.robot.logs.has(e.id);
+  let acts = "";
+  if (withActs) {
+    const b = [];
+    if (e.hold) b.push(`<button class="btn sm" data-act="robot-ep" data-op="release" data-id="${e.id}">▶️ Вернуть</button>`);
+    else b.push(`<button class="btn sm danger" data-act="robot-ep" data-op="hold" data-id="${e.id}" data-running="${running ? 1 : 0}">⏸ Остановить выпуск</button>`);
+    if (allowed) b.push(`<button class="btn sm ghost" data-act="robot-ep" data-op="night" data-id="${e.id}">🌙 Только ночью</button>`);
+    else if (!running) b.push(`<button class="btn sm ghost" data-act="robot-ep" data-op="now" data-id="${e.id}" title="Тяжёлые фазы (сценарий, монтаж) идут ночью; кнопка разрешает их днём на 12 часов">☀️ Запустить сейчас</button>`);
+    if (hasLog) b.push(`<button class="btn sm ghost" data-act="robot-log" data-id="${e.id}">${logOpen ? "Скрыть журнал" : "Журнал"}</button>`);
+    acts = `<div class="rb-acts">${b.join("")}</div>`
+      + (allowed ? `<div class="note warn">☀️ Днём разрешено до ${esc(clockText(e.now_until, nowMs))}. Возьмёт при следующем заходе <code>ytbot run</code> (с <code>--watch</code> — раз в 10 минут).</div>` : "");
+  } else if (hasLog) {
+    acts = `<div class="rb-acts"><button class="btn sm ghost" data-act="robot-log" data-id="${e.id}">${logOpen ? "Скрыть журнал" : "Журнал"}</button></div>`;
+  }
+  const date = e.publish_date ? `<span class="badge">${e.tone === "done" ? "вышел" : "выход"} ${esc(fmt(e.publish_date))}</span>` : "";
+  return `<div class="card pc-stripe rb-ep" style="${pc(p)}">
+    <div class="row" style="align-items:flex-start"><div class="grow title" style="word-break:break-word">${esc(e.label)}</div>${e.hold ? `<span class="badge late">⏸ стоп</span>` : ""}${date}</div>
+    <div class="rb-where ${tone}">${esc(e.where)}</div>
+    <div class="rb-steps">${(e.track || []).map(robotStep).join("")}</div>
+    ${e.run ? robotRun(e.run, nowMs) : ""}${acts}${hasLog && logOpen ? robotLog(e, nowMs) : ""}
+  </div>`;
+}
+
+function viewRobot() {
+  const r = ui.robot;
+  // при каждом заходе во вкладку — свежие данные (пока грузятся, видны прежние); после ошибки — только по «Повторить» или по таймеру
+  if (!r.loading && !r.error && !r.fresh) loadRobot();
+  const retry = `<button class="btn sm" data-act="robot-refresh">Повторить</button>`;
+  if (!r.data) {
+    if (r.error) return `<div class="empty">😕 ${esc(r.error)}<br><br>${retry}</div>`;
+    return `<div class="loading">Загружаю пульт…</div>`;
+  }
+  const d = r.data;
+  const nowMs = Date.parse(d.now) + (Date.now() - r.at);
+  const eps = d.episodes || [], doneEps = d.done || [];
+  const enabled = (d.projects || []).filter((p) => p.runner_enabled);
+  const pcSeen = d.pc_seen_at ? `ПК заходил: ${esc(agoText(nowMs - Date.parse(d.pc_seen_at)))}` : "ПК ещё не заходил";
+  const clock = new Date(r.at).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+  let html = "";
+  if (r.error) html += `<div class="banner"><span class="grow">Не обновилось · ${esc(r.error)}</span>${retry}</div>`;
+  html += `<div class="card rb-head">
+    <div class="row"><div class="grow state ${d.paused ? "off" : ""}">${d.paused ? "⏸ Робот остановлен" : "🟢 Робот работает"}</div>
+      <button class="icon-btn ${r.loading ? "is-busy" : ""}" data-act="robot-refresh" title="Обновить" aria-label="Обновить">🔄</button></div>
+    <div class="rb-meta muted small">
+      <div>Владелец: ${d.owner ? esc(d.owner.name) : "не назначен"}</div>
+      <div>${pcSeen}</div>
+      <div>${d.night ? "🌙 Сейчас ночь" : "☀️ Сейчас день"} · ночное окно ${esc(d.night_window)}: сценарий и монтаж идут только в нём</div>
+      <div>Обновлено в ${esc(clock)} · дальше само раз в ${ROBOT_POLL_MS / 1000} с</div></div>
+    <button class="btn block ${d.paused ? "" : "danger"}" style="margin-top:10px" data-act="robot-pause" data-paused="${d.paused ? 0 : 1}">${d.paused ? "▶️ Запустить робота" : "⏸ Остановить робота"}</button></div>`;
+
+  html += `<h2>Выпуски</h2>`;
+  if (!enabled.length) html += `<div class="card empty">🤖 Робот не включён ни в одном проекте.<br>Включи его переключателем в списке проектов ниже.</div>`;
+  else if (!eps.length) html += `<div class="card empty">Выпусков у робота нет — календарь заведёт за 4 дня до выхода.</div>`;
+  else html += `<div class="rb-list">${eps.map((e) => robotEpisode(e, nowMs, true)).join("")}</div>`;
+
+  if (doneEps.length) {
+    html += `<div class="chips" style="margin-top:10px"><button class="chip ${r.showDone ? "on" : ""}" data-act="robot-done">${r.showDone ? "▾" : "▸"} Сданы за неделю · ${doneEps.length}</button></div>`;
+    if (r.showDone) html += `<div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false)).join("")}</div>`;
+  } else if (enabled.length) html += `<div class="muted small" style="margin:10px 4px">Сданных за неделю пока нет.</div>`;
+
+  html += `<h2>Робот по проектам</h2><div class="card">${(d.projects || []).map((p) => {
+    const sp = proj(p.id);
+    const seen = p.seen_at ? ` · ПК заходил ${esc(agoText(nowMs - Date.parse(p.seen_at)))}` : "";
+    const link = p.linked ? "🔗 папка на ПК связана" : `<span class="${p.runner_enabled ? "rb-bad" : ""}">папка на ПК не связана — <code>ytbot link ${Number(p.id)}</code></span>`;
+    return `<div class="member"><span class="pdot" style="${sp ? pc(sp) : ""}"></span>
+      <div class="grow"><div class="title ellipsis">${esc(p.name)}</div><div class="muted small">${link}${seen}</div></div>
+      <button class="sw ${p.runner_enabled ? "on" : ""}" role="switch" aria-checked="${p.runner_enabled ? "true" : "false"}" aria-label="Робот в проекте ${esc(p.name)}" data-act="robot-project" data-id="${Number(p.id)}" data-on="${p.runner_enabled ? 1 : 0}"></button></div>`;
+  }).join("") || `<div class="muted small">Проектов нет.</div>`}</div>`;
+  return html;
+}
+
 // --- Окно на весь экран (Telegram Desktop и macOS открывают Mini App узким окном)
 const DESKTOP = ["tdesktop", "macos", "web", "weba", "webk", "unigram"];
 const canFullscreen = () => !!(tg && tg.initData && tg.isVersionAtLeast && tg.isVersionAtLeast("8.0") && tg.requestFullscreen && DESKTOP.includes(tg.platform));
@@ -1381,8 +1601,10 @@ function openProject(id) {
 function pcSection(draft) {
   return `<h2>💻 Папка на ПК</h2><div class="card">
     <div>${draft.linked ? "🔗 папка на ПК связана" : `<span class="muted">Папка на ПК не связана — в папке проекта: <code style="user-select:all">ytbot link ${draft.id}</code></span>`}</div>
-    <label class="note" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" data-pf="runner_enabled" ${draft.runner_enabled ? "checked" : ""}>
-      <span>🤖 Робот на ПК<br><span class="muted small">Сам берёт выпуск, готовый к монтажу, скачивает сценарии и озвучку и запускает Claude в папке проекта (<code>ytbot run</code>). Озвучку не заказывает. По умолчанию выключен.</span></span></label></div>`;
+    ${S.me.is_owner
+    ? `<label class="note" style="display:flex;gap:8px;align-items:flex-start;margin-top:8px"><input type="checkbox" data-pf="runner_enabled" ${draft.runner_enabled ? "checked" : ""}>
+      <span>🤖 Робот на ПК<br><span class="muted small">Сам берёт выпуск, готовый к монтажу, скачивает сценарии и озвучку и запускает Claude в папке проекта (<code>ytbot run</code>). Озвучку не заказывает. По умолчанию выключен.</span></span></label>`
+    : `<div class="note" style="margin-top:8px">🤖 Робот на ПК: ${draft.runner_enabled ? "включён" : "выключен"}<br><span class="muted small">Переключает владелец.</span></div>`}</div>`;
 }
 
 function topicsSection(pid) {
@@ -1441,8 +1663,35 @@ const handlers = {
     store("tab", ui.tab);
     // при каждом заходе — свежие цифры (пока грузятся, видны прежние)
     if (ui.tab === "stats") { if (ui.stats) ui.stats.key = ""; ui.statsError = null; }
+    if (ui.tab === "robot") { ui.robot.fresh = false; ui.robot.error = null; }
     window.scrollTo(0, 0);
     render();
+  },
+  "robot-refresh": () => { ui.robot.error = null; return loadRobot(); },
+  "robot-done": () => { ui.robot.showDone = !ui.robot.showDone; render(); },
+  "robot-log": (el) => {
+    const id = Number(el.dataset.id), logs = ui.robot.logs;
+    if (!logs.delete(id)) logs.add(id);
+    render();
+  },
+  "robot-pause": async (el) => {
+    const pause = el.dataset.paused === "1";
+    if (pause && !(await confirmBox("Остановить робота? Идущие прогонки остановятся, новые не начнутся."))) return;
+    const r = await robotAct("robot.pause", { paused: pause }, null, el);
+    if (r) toast(pause ? `⏸ Робот остановлен${r.stopped ? ` · остановлено прогонок: ${r.stopped}` : ""}` : "▶️ Робот запущен");
+  },
+  "robot-project": async (el) => {
+    const id = Number(el.dataset.id), enabled = el.dataset.on !== "1";
+    const p = proj(id);
+    if (!enabled && !(await confirmBox(`Выключить робота в проекте «${p ? p.name : id}»? Идущая прогонка проекта остановится.`))) return;
+    const r = await robotAct("robot.project", { project_id: id, enabled }, null, el);
+    if (r) toast(enabled ? "🤖 Робот включён в проекте" : "Робот в проекте выключен");
+  },
+  "robot-ep": async (el) => {
+    const id = Number(el.dataset.id), op = el.dataset.op;
+    if (op === "hold" && !(await confirmBox(el.dataset.running === "1" ? "Остановить выпуск? Идущая прогонка остановится." : "Остановить выпуск? Робот его не возьмёт, пока не вернёшь."))) return;
+    const msg = { hold: "⏸ Выпуск остановлен", release: "▶️ Выпуск возвращён роботу", now: "☀️ Днём разрешено на 12 часов", night: "🌙 Снова только ночью" }[op];
+    await robotAct("robot.episode", { episode_id: id, op }, msg, el);
   },
   // выбор запоминаем: в следующий раз на компьютере откроется так же
   "fullscreen": () => {
@@ -1702,6 +1951,11 @@ async function start() {
     return;
   }
   const sp = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) || qs.get("startapp") || "";
+  // ссылка из бота «🤖 Открыть пульт»: startapp=robot, ?tab=robot или #robot — только владельцу.
+  // Telegram дописывает к хэшу свои параметры: #robot?tgWebAppData=… (так их разбирает telegram-web-app.js) или #robot&tgWebAppData=…
+  if (S.me.is_owner && (sp === "robot" || qs.get("tab") === "robot" || /^#?(?:[^?&]*[?&])*robot(?:$|[?&])/.test(location.hash))) {
+    ui.tab = "robot"; ui.robot.fresh = false; store("tab", "robot"); render();
+  }
   const m = sp.match(/^ep_(\d+)$/);
   if (m && ep(Number(m[1]))) openSheet(episodeSheet(Number(m[1])), episodeNative(Number(m[1])));
 }
