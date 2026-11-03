@@ -174,7 +174,7 @@
 
   /* Телефоны и планшеты с пальцем: поля от 16px, иначе iOS приближает страницу при вводе; кнопки крупнее */
   @media (pointer: coarse) {
-    .inp, .stage-box select, .stage-box input[type=date] { font-size: 16px; }
+    .inp, .stage-box select, .stage-box input[type=date], .rb-sel { font-size: 16px; }
     .btn.sm { padding: 8px 12px; }
     .icon-btn { padding: 8px 10px; }
   }
@@ -276,6 +276,9 @@
   @media (prefers-reduced-motion: reduce) { .rb-step.active .mk { animation: none; } }
   .rb-run { border-top: 1px solid var(--sep); margin-top: 6px; padding-top: 7px; font-size: 13px; }
   .rb-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .rb-until { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--hint); }
+  .rb-sel { min-width: 0; max-width: 100%; border: 1px solid var(--sep); background: var(--card); color: var(--text); border-radius: 8px; padding: 4px 6px; font-size: 13px; }
+  .rb-sel:focus { border-color: var(--accent); outline: none; }
   .rb-log { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--bg2); font: 12px/1.4 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }
   .sw { position: relative; flex: none; width: 46px; height: 28px; border: 0; border-radius: 999px; background: var(--sep); cursor: pointer; transition: background .15s; }
   .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
@@ -1198,6 +1201,19 @@ function robotLog(e, nowMs) {
   return `${when}<pre class="rb-log">${body}</pre>`;
 }
 
+/** «Робот ведёт до» (robot.until): у проекта — по умолчанию для новых выпусков, у выпуска — своё или «как у проекта». */
+const UNTIL_RU = { script: "Сценарий", voice: "Озвучка", montage: "Монтаж", end: "Конец" };
+const UNTIL_HINT = { script: "только сценарий", voice: "сценарий и озвучка", montage: "до проверки стоп-кадров и правок, финал твой", end: "все фазы, как раньше" };
+function untilOptions(selected, inherit) {
+  const own = Object.keys(UNTIL_RU).map((k) => `<option value="${k}" ${selected === k ? "selected" : ""} title="${esc(UNTIL_HINT[k])}">${UNTIL_RU[k]}</option>`).join("");
+  return inherit ? `<option value="" ${selected ? "" : "selected"}>как у проекта · ${esc(UNTIL_RU[inherit] || "Конец")}</option>${own}` : own;
+}
+function robotUntilRow(e) {
+  const pp = ((ui.robot.data && ui.robot.data.projects) || []).find((p) => p.id === e.project_id);
+  const inherit = (pp && pp.robot_until) || "end";
+  return `<label class="rb-until"><span>Робот ведёт до:</span><select class="rb-sel" data-act-change="robot-until" data-ep="${Number(e.id)}" aria-label="Робот ведёт выпуск до этапа">${untilOptions(e.robot_until_own || "", inherit)}</select></label>`;
+}
+
 function robotEpisode(e, nowMs, withActs) {
   const p = proj(e.project_id);
   const tone = ["work", "wait", "owner", "fail", "stop", "done"].includes(e.tone) ? e.tone : "wait";
@@ -1213,7 +1229,7 @@ function robotEpisode(e, nowMs, withActs) {
     if (allowed) b.push(`<button class="btn sm ghost" data-act="robot-ep" data-op="night" data-id="${e.id}">🌙 Только ночью</button>`);
     else if (!running) b.push(`<button class="btn sm ghost" data-act="robot-ep" data-op="now" data-id="${e.id}" title="Тяжёлые фазы (сценарий, монтаж) идут ночью; кнопка разрешает их днём на 12 часов">☀️ Запустить сейчас</button>`);
     if (hasLog) b.push(`<button class="btn sm ghost" data-act="robot-log" data-id="${e.id}">${logOpen ? "Скрыть журнал" : "Журнал"}</button>`);
-    acts = `<div class="rb-acts">${b.join("")}</div>`
+    acts = robotUntilRow(e) + `<div class="rb-acts">${b.join("")}</div>`
       + (allowed ? `<div class="note warn">☀️ Днём разрешено до ${esc(clockText(e.now_until, nowMs))}. Возьмёт при следующем заходе <code>ytbot run</code> (с <code>--watch</code> — раз в 10 минут).</div>` : "");
   } else if (hasLog) {
     acts = `<div class="rb-acts"><button class="btn sm ghost" data-act="robot-log" data-id="${e.id}">${logOpen ? "Скрыть журнал" : "Журнал"}</button></div>`;
@@ -1265,12 +1281,13 @@ function viewRobot() {
     if (r.showDone) html += `<div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false)).join("")}</div>`;
   } else if (enabled.length) html += `<div class="muted small" style="margin:10px 4px">Сданных за неделю пока нет.</div>`;
 
-  html += `<h2>Робот по проектам</h2><div class="card">${(d.projects || []).map((p) => {
+  html += `<h2>Робот по проектам</h2><div class="muted small" style="margin:-4px 4px 6px">«До» — до какого этапа робот ведёт новые выпуски проекта; у выпуска можно своё.</div><div class="card">${(d.projects || []).map((p) => {
     const sp = proj(p.id);
     const seen = p.seen_at ? ` · ПК заходил ${esc(agoText(nowMs - Date.parse(p.seen_at)))}` : "";
     const link = p.linked ? "🔗 папка на ПК связана" : `<span class="${p.runner_enabled ? "rb-bad" : ""}">папка на ПК не связана — <code>ytbot link ${Number(p.id)}</code></span>`;
     return `<div class="member"><span class="pdot" style="${sp ? pc(sp) : ""}"></span>
-      <div class="grow"><div class="title ellipsis">${esc(p.name)}</div><div class="muted small">${link}${seen}</div></div>
+      <div class="grow"><div class="title ellipsis">${esc(p.name)}</div><div class="muted small">${link}${seen}</div>
+        <label class="rb-until" style="margin-top:4px"><span>до:</span><select class="rb-sel" data-act-change="robot-until" data-pid="${Number(p.id)}" aria-label="Робот ведёт выпуски проекта ${esc(p.name)} до этапа">${untilOptions(p.robot_until || "end")}</select></label></div>
       <button class="sw ${p.runner_enabled ? "on" : ""}" role="switch" aria-checked="${p.runner_enabled ? "true" : "false"}" aria-label="Робот в проекте ${esc(p.name)}" data-act="robot-project" data-id="${Number(p.id)}" data-on="${p.runner_enabled ? 1 : 0}"></button></div>`;
   }).join("") || `<div class="muted small">Проектов нет.</div>`}</div>`;
   return html;
@@ -1887,6 +1904,15 @@ document.addEventListener("change", (ev) => {
     st.folder = null; st.compressed = null; st.useFolder = true;
     renderSheet(); // название, код и дата живут в ui.newEp — смена проекта их не сбрасывает
     suggestDate(st);
+    return;
+  }
+  if (el.dataset.actChange === "robot-until") {
+    const v = el.value || null;
+    const body = el.dataset.ep ? { episode_id: Number(el.dataset.ep), until: v } : { project_id: Number(el.dataset.pid), until: v };
+    const msg = el.dataset.ep
+      ? (!v ? "Выпуск — как у проекта" : v === "end" ? "🤖 Робот ведёт выпуск до конца" : `✋ Робот ведёт выпуск до: ${UNTIL_RU[v]}`)
+      : `Новые выпуски проекта — до: ${UNTIL_RU[v || "end"]}`;
+    robotAct("robot.until", body, msg, el);
     return;
   }
   if (el.dataset.actChange === "topic") {
