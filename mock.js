@@ -6,15 +6,20 @@
   const STAGES = ["script", "voice", "edit", "upload"];
   const langs = ["ru", "en", "de", "pl", "es"];
 
+  // ?viewer=admin — админ, но не владелец: вкладки «🤖» нет, robot.* отвечают 403, чекбокса «Робот на ПК» в проекте нет
+  const asAdmin = new URLSearchParams(location.search).get("viewer") === "admin";
   const st = {
-    me: { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true },
+    me: asAdmin
+      ? { tg_id: 3, name: "Админ", username: "admin2", is_admin: true, can_dm: true, is_owner: false }
+      : { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true, is_owner: true },
     members: [
       { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true },
       { tg_id: 2, name: "Павел", username: "pavel", is_admin: false, can_dm: false },
+      ...(asAdmin ? [{ tg_id: 3, name: "Админ", username: "admin2", is_admin: true, can_dm: true }] : []),
     ],
     projects: [
-      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1, local_dir: "F:/Скрытая физика", runner_enabled: false },
-      { id: 2, name: "Тактика Боя", emoji: "⚔️", thread_id: 12, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 2 },
+      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1, local_dir: "F:/Скрытая физика", runner_enabled: true },
+      { id: 2, name: "Тактика Боя", emoji: "⚔️", thread_id: 12, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 2, local_dir: "F:/Тактика Боя", runner_enabled: true },
       { id: 3, name: "Channel #1", emoji: "🪐", thread_id: null, cadence_days: 4, script_offset: 6, voice_offset: 4, edit_offset: 2, upload_offset: 0, sort: 3 },
     ],
     channels: [], episodes: [], tasks: [], links: [], roles: [],
@@ -133,9 +138,142 @@
   createEpisode({ project_id: 2, title: "Фаланга против легиона", publish_date: add(today, 13) }, true);
   void e2;
 
+  // ---- пульт робота: зеркало контракта robot.state / robot.pause / robot.project / robot.episode ----
+  // &nopulse=1 — у идущей прогонки пульс старше 15 минут (красное «нет пульса»); &emptyrobot=1 — пустое состояние без проектов и выпусков
+  const MIN = 60000, HOUR = 60 * MIN;
+  const qsm = new URLSearchParams(location.search);
+  const isoAgo = (min) => new Date(Date.now() - min * MIN).toISOString();
+  const hourIn = (tz) => Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", hour12: false }).format(new Date())) % 24;
+  const rb = { paused: false, seen: 4 };
+  if (qsm.has("emptyrobot")) for (const p of st.projects) p.runner_enabled = false;
+  const LOG = [
+    "[14:02] фаза монтаж, часть 3: беру сцены 12–18",
+    "[14:05] сцена 12: подпись «Лагерь на закате» — ок",
+    "[14:11] сцена 13: ролик 4K, рендер превью…",
+    "[14:19] сцена 14: правлю тайминг по озвучке (ru)",
+    "[14:26] сцена 15: ошибка ffmpeg, повторяю",
+    "[14:27] сцена 15: ок",
+    "[14:34] сцена 16: добавляю карту похода",
+  ].join("\n");
+  const FAIL_NOTE = "Прогонка закончилась без стоп-кадров (no_checkpoint).\nПоследние строки журнала:\n[02:41] сцена 9: нет файла озвучки de\n[02:41] claude завершился с кодом 0";
+  // выпуски робота: kind — running | review | waitnight | voicewait | failed | stopped | done
+  const rbEps = [
+    { id: 2, pid: 2, label: "⚔️ Тактика Боя · S06 «Почему римляне строили лагерь каждый вечер»", code: "S06", pub: add(today, 1), kind: "running", hold: false, until: null },
+    { id: 1, pid: 1, label: "🔭 Скрытая Физика · S05 «Как Эратосфен измерил Землю палкой и тенью»", code: "S05", pub: add(today, 3), kind: "review", hold: false, until: null },
+    { id: 5, pid: 2, label: "⚔️ Тактика Боя · S07 «Фаланга против легиона» · 3D", code: "S07", pub: add(today, 5), kind: "waitnight", hold: false, until: null },
+    { id: 6, pid: 1, label: "🔭 Скрытая Физика · S06 «Почему небо синее»", code: "S06", pub: add(today, 8), kind: "voicewait", hold: true, until: null },
+    { id: 7, pid: 2, label: "⚔️ Тактика Боя · S05 «Битва при Каннах»", code: "S05", pub: add(today, 2), kind: "failed", hold: false, until: null },
+  ];
+  const rbDone = [{ id: 4, pid: 1, label: "🔭 Скрытая Физика · S04 «Ньютон и яблоко: что было на самом деле»", code: "S04", pub: add(today, -2) }];
+  const MODEL = { model: "claude-opus-5-5", model_label: "Opus 5.5" };
+  const heartbeat = () => (qsm.has("nopulse") ? isoAgo(23) : isoAgo(((Date.now() / 1000) % 150) / 60));
+
+  function rbRun(m) {
+    const base = { id: 30 + m.id, host: "NIGMAT-PC", ...MODEL, log_tail: null, log_at: null, note: null };
+    switch (m.kind) {
+      case "running": return { ...base, phase: "montage", part: 3, status: "running", started_at: isoAgo(47), heartbeat_at: heartbeat(), log_tail: LOG, log_at: isoAgo(1) };
+      case "review": return { ...base, phase: "montage", part: 3, status: "review", started_at: isoAgo(380), heartbeat_at: isoAgo(330), note: "Монтаж готов, стоп-кадры отправлены в личку владельцу." };
+      case "stopped": return { ...base, phase: "montage", part: 3, status: "stopped", started_at: isoAgo(70), heartbeat_at: isoAgo(3), note: "остановил владелец" };
+      case "failed": return { ...base, phase: "montage", part: 1, status: "failed", started_at: isoAgo(420), heartbeat_at: isoAgo(400), note: FAIL_NOTE };
+      case "waitnight": return { ...base, phase: "voice", part: 1, status: "done", host: "NIGMAT-PC", model: null, model_label: "модель не указана", started_at: isoAgo(900), heartbeat_at: isoAgo(890), note: "Озвучка заказана и принята." };
+      default: return null;
+    }
+  }
+  function rbTrack(m, allowed, paused) {
+    const S = (key, title, state, detail = null) => ({ key, title, state, detail });
+    const steps = (v) => [
+      S("topic", "Тема", "done", m.code), S("script", "Сценарий", ...v.script), S("voice", "Озвучка", ...v.voice), S("montage", "Монтаж", ...v.montage),
+      S("review", "Проверка", ...v.review), S("changes", "Правки", ...v.changes), S("final", "Финал", ...v.final), S("upload", "Выкладка", ...v.upload),
+    ];
+    const todo = ["todo"];
+    const front = { script: ["done", "5 языков"], voice: ["done", "5 из 5"] };
+    switch (m.kind) {
+      case "running": return steps({ ...front, montage: paused ? ["wait", "остановлена"] : ["active", "часть 3"], review: todo, changes: todo, final: todo, upload: todo });
+      case "stopped": return steps({ ...front, montage: ["wait", "остановлена · часть 3"], review: todo, changes: todo, final: todo, upload: todo });
+      case "review": return steps({ ...front, montage: ["done", "3 части"], review: ["wait", "ждёт тебя 5 ч"], changes: todo, final: todo, upload: todo });
+      case "waitnight": return steps({ ...front, montage: ["wait", allowed ? "днём разрешено" : "ждёт ночи 1:00–8:00"], review: todo, changes: todo, final: todo, upload: todo });
+      case "voicewait": return steps({ script: ["done", "5 языков"], voice: ["wait", "ждёт озвучку: 2 из 5"], montage: todo, review: todo, changes: todo, final: todo, upload: todo });
+      case "failed": return steps({ ...front, montage: ["fail", "нет стоп-кадров"], review: todo, changes: todo, final: todo, upload: todo });
+      default: return [];
+    }
+  }
+  function rbWhere(m, allowed, nowIso) {
+    if (m.hold) return { where: "⏸ остановлен тобой", tone: "stop" };
+    if (rb.paused) return { where: "⏸ робот остановлен — выпуск ждёт запуска", tone: "stop" };
+    switch (m.kind) {
+      case "running": return { where: "🤖 делает: монтаж, часть 3 · ПК NIGMAT-PC", tone: "work" };
+      case "review": return { where: "👀 ждёт твоей проверки 5 ч", tone: "owner" };
+      case "waitnight": return allowed ? { where: "☀️ днём разрешено — ждёт захода ytbot run", tone: "wait" } : { where: "⏳ ждёт ночи (1:00–8:00)", tone: "wait" };
+      case "voicewait": return { where: "⏳ ждёт озвучку: 2 из 5 языков", tone: "wait" };
+      case "failed": return { where: "❌ упал: нет стоп-кадров, повтор через 1 ч", tone: "fail" };
+      case "stopped": return { where: "⏹ остановлена: прогонку остановили", tone: "stop" };
+      default: return { where: "", tone: "wait" };
+    }
+  }
+  function rbPanelEp(m) {
+    const allowed = !!m.until && Date.parse(m.until) > Date.now();
+    const w = rbWhere(m, allowed);
+    return {
+      id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: m.hold, now_until: allowed ? m.until : null,
+      ...w, track: rbTrack(m, allowed, rb.paused), run: rbRun(m),
+    };
+  }
+  function rbDoneEp(m) {
+    const S = (key, title, state, detail = null) => ({ key, title, state, detail });
+    return {
+      id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: false, now_until: null, where: "✅ выложен " + m.pub, tone: "done",
+      track: [S("topic", "Тема", "done", m.code), S("script", "Сценарий", "done"), S("voice", "Озвучка", "done", "5 из 5"), S("montage", "Монтаж", "done", "2 части"),
+        S("review", "Проверка", "done"), S("changes", "Правки", "skip", "правок не было"), S("final", "Финал", "done", "заход 1 из 12"), S("upload", "Выкладка", "done", m.pub)],
+      run: { id: 99, phase: "final", part: 1, status: "done", host: "NIGMAT-PC", ...MODEL, started_at: isoAgo(3000), heartbeat_at: isoAgo(2990), log_tail: null, log_at: null, note: "Финал собран, ролик залит на Диск." },
+    };
+  }
+  function robotState() {
+    const enabled = new Set(st.projects.filter((p) => p.runner_enabled).map((p) => p.id));
+    const eps = qsm.has("emptyrobot") || !enabled.size ? [] : rbEps.filter((m) => enabled.has(m.pid)).map(rbPanelEp);
+    const dn = qsm.has("emptyrobot") || !enabled.size ? [] : rbDone.filter((m) => enabled.has(m.pid)).map(rbDoneEp);
+    const h = hourIn(st.settings.timezone);
+    return {
+      paused: rb.paused, owner: { tg_id: 1, name: "Нигмат" }, now: new Date().toISOString(), night: h >= 1 && h < 8, night_window: "1:00–8:00",
+      pc_seen_at: qsm.has("emptyrobot") ? null : isoAgo(rb.seen),
+      projects: st.projects.map((p) => ({ id: p.id, name: p.name, runner_enabled: !!p.runner_enabled, linked: !!p.local_dir, seen_at: p.local_dir && !qsm.has("emptyrobot") ? isoAgo(rb.seen + p.id) : null })),
+      episodes: eps, done: dn,
+    };
+  }
+  function robotAction(action, b) {
+    if (!st.me.is_owner) throw new Error("Пульт робота — только у владельца");
+    switch (action) {
+      case "robot.state": return robotState();
+      case "robot.pause": {
+        rb.paused = !!b.paused;
+        let stopped = 0;
+        if (rb.paused) for (const m of rbEps) { if (m.kind === "running") { m.kind = "stopped"; stopped++; } }
+        else for (const m of rbEps) if (m.kind === "stopped" && !m.hold) m.kind = "waitnight";
+        return { ok: true, stopped };
+      }
+      case "robot.project": {
+        const p = proj(b.project_id);
+        if (!p) throw new Error("Проект не найден");
+        p.runner_enabled = !!b.enabled;
+        if (!p.runner_enabled) for (const m of rbEps) if (m.pid === p.id && m.kind === "running") m.kind = "stopped";
+        return { ok: true };
+      }
+      case "robot.episode": {
+        const m = rbEps.find((x) => x.id === b.episode_id);
+        if (!m) throw new Error("Выпуск не найден");
+        if (b.op === "hold") { m.hold = true; if (m.kind === "running") m.kind = "stopped"; }
+        else if (b.op === "release") { m.hold = false; if (m.kind === "stopped") m.kind = "waitnight"; }
+        else if (b.op === "now") { m.until = new Date(Date.now() + 12 * HOUR).toISOString(); m.hold = false; if (m.kind === "stopped") m.kind = "waitnight"; }
+        else if (b.op === "night") m.until = null;
+        else throw new Error("Неизвестная операция");
+        return { ok: true };
+      }
+    }
+  }
+
   const clone = (x) => JSON.parse(JSON.stringify(x));
   window.MOCK_API = async function (action, b) {
     await new Promise((r) => setTimeout(r, 120));
+    if (action.startsWith("robot.")) return clone(robotAction(action, b));
     switch (action) {
       // как на сервере: путь папки на ПК участникам не отдаётся — только признак linked
       case "state": return clone({ ...st, today, projects: st.projects.map(({ local_dir, ...p }) => ({ ...p, linked: !!local_dir })) });
@@ -196,7 +334,8 @@
         if (!p) { p = { id: Math.max(...st.projects.map((x) => x.id)) + 1, thread_id: null }; st.projects.push(p); }
         if (!st.me.is_admin) throw new Error("Только для админа команды");
         for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days", "color"]) p[k] = b[k];
-        if (b.runner_enabled !== undefined) p.runner_enabled = !!b.runner_enabled;
+        // как на сервере: переключатель робота — только владельцу, чужое значение игнорируется
+        if (b.runner_enabled !== undefined && st.me.is_owner) p.runner_enabled = !!b.runner_enabled;
         p.drive_folder_id = (String(b.drive_folder || "").match(/folders\/([\w-]+)/) || [])[1] || null;
         const removed = st.channels.filter((c) => c.project_id === p.id && !b.channels.some((x) => x.id === c.id)).map((c) => c.id);
         st.channels = st.channels.filter((c) => !removed.includes(c.id));
