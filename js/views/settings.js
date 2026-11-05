@@ -1,15 +1,15 @@
 // «Настройки»: команда, проекты, Диск, напоминания; форма проекта.
-import { api } from "../core/api.js?v=d723e8c5";
+import { api } from "../core/api.js?v=1e81587e";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=f81f1930";
-import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=be556fd4";
-import { go } from "../core/router.js?v=5020c62a";
-import * as session from "../core/session.js?v=d723e8c5";
-import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=fe0abf91";
-import { confirmBox } from "../ui/confirm.js?v=1dd10cfc";
+import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=37ec8712";
+import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=0b379ff0";
+import { go } from "../core/router.js?v=0766b364";
+import * as session from "../core/session.js?v=1e81587e";
+import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=3f1c2f7b";
+import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=7166efce";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=2617d096";
+import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=cbd257cd";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=4f25eb6b";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
@@ -38,7 +38,7 @@ export function view() {
   let html = onboarding("settings") + `<div class="set-cols"><div><h2>Команда</h2><div class="card">${S.members.map((m) => `<div class="member">
       <div class="ava">${esc(m.name.slice(0, 1).toUpperCase())}</div>
       <div class="grow"><div>${esc(m.name)}${m.tg_id === S.me.tg_id ? " <span class='muted'>(ты)</span>" : ""}</div>
-      <div class="muted">${m.username ? "@" + esc(m.username) + " · " : ""}${m.is_admin ? "админ" : "участник"}${m.can_dm ? "" : " · не писал боту в личку"}</div></div>
+      <div class="muted">${m.username ? "@" + esc(m.username) + " · " : ""}${m.is_admin ? "админ" : "участник"}${m.can_dm ? "" : " · не писал боту в личку"}${S.me.is_owner && m.timezone ? " · " + esc(m.timezone) : ""}</div></div>
       <div class="member-acts">${memberActions(m)}</div>
     </div>`).join("")}
     <div class="muted small mt-2">Новые люди появляются здесь сами, когда нажмут кнопку в группе или напишут боту /start.</div></div>`;
@@ -308,14 +308,17 @@ export const actions = {
       if (!m) { closeSheet({ force: true }); return ""; }
       return `${sheetHead("Имя в боте")}
         <div class="card"><label class="f"><span>Как бот называет ${m.username ? "@" + esc(m.username) : "участника"} в постах и напоминаниях</span>
-        <input class="inp" id="rn-name" data-enter="rename-save" value="${esc(m.name)}" maxlength="40" enterkeyhint="done"></label></div>
+        <input class="inp" id="rn-name" data-enter="rename-save" value="${esc(m.name)}" maxlength="40" enterkeyhint="done"></label>
+        ${S.me.is_owner ? `<label class="f"><span>Часовой пояс для выкладки, например Pacific/Auckland; пусто — как у команды</span>
+        <input class="inp" id="rn-tz" data-enter="rename-save" value="${esc(m.timezone || "")}" maxlength="60" enterkeyhint="done" autocapitalize="off" spellcheck="false"></label>` : ""}</div>
         <button class="btn block dup-main" data-act="rename-save" data-id="${id}">Сохранить</button>`;
     }, () => ({ main: { text: "Сохранить", run: () => actions["rename-save"]({ dataset: { id } }) } }));
   },
   "rename-save": async (el) => {
     const name = byId("rn-name").value.trim();
     if (!name) return toast("Имя не может быть пустым");
-    if (await act("member.update", { tg_id: Number(el.dataset.id), name }, "Сохранено", { el })) closeSheet({ force: true });
+    const tz = byId("rn-tz");
+    if (await act("member.update", { tg_id: Number(el.dataset.id), name, ...(tz ? { timezone: tz.value.trim() } : {}) }, "Сохранено", { el })) closeSheet({ force: true });
   },
   "change:topic": (el) => {
     readProjectForm();

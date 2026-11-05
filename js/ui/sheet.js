@@ -2,12 +2,12 @@
 //   form  — на телефоне лист снизу, от 600 px окно по центру;
 //   panel — на телефоне весь экран, на планшете окно, от 1024 px панель справа от списка (страница остаётся рабочей).
 // Каждая шторка — запись в истории, поэтому закрывается всегда через «Назад»: и крестик, и Esc, и кнопка Telegram.
-import { markTappable } from "../core/logic.js?v=f81f1930";
+import { markTappable } from "../core/logic.js?v=37ec8712";
 import { morph } from "../core/morph.js?v=b4de8c1c";
-import { currentRoute, writeHistory } from "../core/router.js?v=5020c62a";
-import { ui } from "../core/store.js?v=be556fd4";
-import { confirmBox } from "./confirm.js?v=1dd10cfc";
-import { domDirty } from "./form.js?v=f681c8e2";
+import { currentRoute, writeHistory } from "../core/router.js?v=0766b364";
+import { ui } from "../core/store.js?v=0b379ff0";
+import { confirmBox } from "./confirm.js?v=5a21b83c";
+import { domDirty } from "./form.js?v=748af9e2";
 
 const stack = [];
 let waiter = null; // кто ждёт завершения history.go

@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=d723e8c5";
+import { api } from "../core/api.js?v=1e81587e";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, STAGES, voiceHint } from "../core/logic.js?v=f81f1930";
-import { go } from "../core/router.js?v=5020c62a";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=be556fd4";
-import { haptic, openUrl } from "../core/tg.js?v=fe0abf91";
-import { confirmBox } from "../ui/confirm.js?v=1dd10cfc";
+import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, STAGES, voiceHint } from "../core/logic.js?v=37ec8712";
+import { go } from "../core/router.js?v=0766b364";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=0b379ff0";
+import { haptic, openUrl } from "../core/tg.js?v=3f1c2f7b";
+import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=7166efce";
-import { questionBlock } from "../ui/question.js?v=3dcd495d";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=2617d096";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=cbd257cd";
+import { questionBlock } from "../ui/question.js?v=69c8f4bf";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=4f25eb6b";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */

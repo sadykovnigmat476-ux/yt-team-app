@@ -1,16 +1,16 @@
 // «Сейчас»: что ждёт владельца, главная задача крупно, остальное по срочности.
-import { api } from "../core/api.js?v=d723e8c5";
-import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV } from "../core/logic.js?v=f81f1930";
-import { currentRoute, go } from "../core/router.js?v=5020c62a";
-import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=be556fd4";
-import { openUrl } from "../core/tg.js?v=fe0abf91";
+import { api } from "../core/api.js?v=1e81587e";
+import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV, stageDay } from "../core/logic.js?v=37ec8712";
+import { currentRoute, go } from "../core/router.js?v=0766b364";
+import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=0b379ff0";
+import { openUrl } from "../core/tg.js?v=3f1c2f7b";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=7166efce";
-import { questionBlock } from "../ui/question.js?v=3dcd495d";
+import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=cbd257cd";
+import { questionBlock } from "../ui/question.js?v=69c8f4bf";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { openEpisode } from "./episode.js?v=d3504e66";
-import { loadFolders, openFolderQuestion } from "./episodes.js?v=4fb84bed";
-import { noEmoji } from "./robot.js?v=5f2de8a7";
+import { openEpisode } from "./episode.js?v=d18a5bc6";
+import { loadFolders, openFolderQuestion } from "./episodes.js?v=92d63ec2";
+import { noEmoji } from "./robot.js?v=5a688a44";
 
 // ---------- «Ждёт тебя»: решения владельца в одном списке ----------
 const inbox = { data: null, error: null, loading: false, all: false };
@@ -73,7 +73,7 @@ function waitingBlock() {
 /** Главная задача: самая срочная из тех, что можно делать прямо сейчас. */
 function heroCard(g) {
   const e = ep(g.eid), p = proj(e.project_id), m = META[g.stage];
-  const d = dueInfo(S.today, g.due);
+  const d = dueInfo(stageDay(S, g.stage), g.due);
   const single = g.info.total === 1 && !g.info.ts[0].channel_id;
   const langs = single ? "" : `<div class="chips wrap">${g.info.ts.map(langChip).join("")}</div>`;
   // G13: у выпуска, который ведёт робот, участнику закрывать этап нельзя — объясняем вместо кнопки
@@ -104,7 +104,7 @@ function nextRow(g) {
     ${icon(m.i)}
     <div class="t"><div class="ellipsis"><b>${esc(epLabel(e, "short"))}</b> ${esc(e.title)}</div>
       <div class="muted small ellipsis">${m.n}${sub ? ` · ${sub}` : ""}${who}</div></div>
-    ${g.waiting ? `<span class="badge" aria-label="ждёт">${icon("hourglass")}</span>` : dueBadge(g.due)}</div>`;
+    ${g.waiting ? `<span class="badge" aria-label="ждёт">${icon("hourglass")}</span>` : dueBadge(g.due, false, stageDay(S, g.stage))}</div>`;
 }
 
 /** Секция списка: заголовок и строки, сгруппированные по проектам. */

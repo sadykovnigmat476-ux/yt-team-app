@@ -251,10 +251,19 @@ export function nextCode(S, pid) {
   return "S" + String(max + 1).padStart(2, "0");
 }
 
+/** «Сегодня» для задач этапа: выкладку сервер считает по поясу исполнителя (upload_today), остальное — день команды. */
+export const stageDay = (S, stage) => (stage === "upload" && S.upload_today) || S.today;
+
+/** Зеркало uploadHidden: своя выкладка со сроком позже сегодняшнего дня не видна на экране дел; владелец видит всё. */
+export function uploadHiddenFromMe(S, t) {
+  return !S.me.is_owner && t.assignee_id === S.me.tg_id && t.stage === "upload" && !t.done_at && !!t.due_date && t.due_date > stageDay(S, "upload");
+}
+
 /** Этапы с открытыми задачами человека (all — всей команды), самые срочные первыми. */
 export function nowGroups(S, all) {
   const me = S.me.tg_id;
-  const open = S.tasks.filter((t) => !t.done_at && (all || t.assignee_id === me));
+  const shown = (t) => !t.done_at && (all || t.assignee_id === me) && !uploadHiddenFromMe(S, t);
+  const open = S.tasks.filter(shown);
   const map = new Map();
   for (const t of open) {
     const k = t.episode_id + ":" + t.stage;
@@ -262,7 +271,7 @@ export function nowGroups(S, all) {
   }
   return [...map.values()].map((g) => {
     const info = stageInfo(S, g.eid, g.stage);
-    const mine = info.ts.filter((t) => !t.done_at && (all || t.assignee_id === me));
+    const mine = info.ts.filter(shown);
     const activeMine = mine.filter((t) => isActive(S, t));
     const due = activeMine.map((t) => t.due_date).filter(Boolean).sort()[0] || info.due;
     return { ...g, info, activeMine, due, waiting: activeMine.length === 0, who: [...new Set(mine.map((t) => t.assignee_id))].map((id) => memOf(S, id)).filter(Boolean) };
@@ -273,8 +282,9 @@ export function nowGroups(S, all) {
 export function nowBuckets(S, groups, skip) {
   const rest = groups.filter((g) => g !== skip);
   const active = rest.filter((g) => !g.waiting);
-  const hot = active.filter((g) => g.due && g.due <= S.today);
-  const later = active.filter((g) => g.due && g.due > S.today && daysBetween(S.today, g.due) > 7);
+  const day = (g) => stageDay(S, g.stage);
+  const hot = active.filter((g) => g.due && g.due <= day(g));
+  const later = active.filter((g) => g.due && g.due > day(g) && daysBetween(day(g), g.due) > 7);
   const next = active.filter((g) => !hot.includes(g) && !later.includes(g));
   return { hot, next, later, waiting: rest.filter((g) => g.waiting) };
 }

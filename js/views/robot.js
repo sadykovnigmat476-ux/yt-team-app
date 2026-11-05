@@ -1,13 +1,13 @@
 // Пульт робота (владелец): все выпуски робота от темы до выкладки, расход, управление выпуском и история прогонок.
-import { api } from "../core/api.js?v=d723e8c5";
-import { agoText, esc, fmt, fmtNum, robotRescue } from "../core/logic.js?v=f81f1930";
-import { currentRoute, go } from "../core/router.js?v=5020c62a";
-import { act, isBusy, pc, proj, render, S, ui } from "../core/store.js?v=be556fd4";
+import { api } from "../core/api.js?v=1e81587e";
+import { agoText, esc, fmt, fmtNum, robotRescue } from "../core/logic.js?v=37ec8712";
+import { currentRoute, go } from "../core/router.js?v=0766b364";
+import { act, isBusy, pc, proj, render, S, ui } from "../core/store.js?v=0b379ff0";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { confirmBox } from "../ui/confirm.js?v=1dd10cfc";
-import { sheetHead } from "../ui/parts.js?v=7166efce";
-import { questionBlock } from "../ui/question.js?v=3dcd495d";
-import { openSheet } from "../ui/sheet.js?v=2617d096";
+import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
+import { sheetHead } from "../ui/parts.js?v=cbd257cd";
+import { questionBlock } from "../ui/question.js?v=69c8f4bf";
+import { openSheet } from "../ui/sheet.js?v=4f25eb6b";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 

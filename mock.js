@@ -8,11 +8,14 @@
 
   // ?viewer=admin — админ, но не владелец: вкладки «🤖» нет, robot.* отвечают 403, чекбокса «Робот на ПК» в проекте нет
   // ?noowner=1 — владелец не задан: пульт у первого админа с подсказкой (owner_hint)
+  // ?viewer=pavel — выкладчик: будущей выкладки на экране дел нет
   const asAdmin = new URLSearchParams(location.search).get("viewer") === "admin";
+  const asPavel = new URLSearchParams(location.search).get("viewer") === "pavel";
   const noOwner = new URLSearchParams(location.search).has("noowner");
   const st = {
     me: asAdmin
       ? { tg_id: 3, name: "Админ", username: "admin2", is_admin: true, can_dm: true, is_owner: false }
+      : asPavel ? { tg_id: 2, name: "Павел", username: "pavel", is_admin: false, can_dm: false, is_owner: false }
       : { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true, is_owner: true },
     members: [
       { tg_id: 1, name: "Нигмат", username: "SNigmat", is_admin: true, can_dm: true },
@@ -49,6 +52,11 @@
   }
 
   // ---- зеркало серверных правил (domain.ts): сроки со сжатием, перенос, коды ----
+  /** uploadDayOf: «сегодня» для выкладки по поясу вызвавшего; своего пояса нет — день команды. */
+  const uploadToday = () => {
+    const tz = (st.members.find((m) => m.tg_id === st.me.tg_id) || {}).timezone;
+    return tz ? new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date()) : today;
+  };
   const proj = (id) => st.projects.find((x) => x.id === id);
   const dueFor = (p, s, pub) => add(pub, -p[s + "_offset"]);
   /** scheduleFor: срок = max(по оффсету, сегодня), но не позже даты выхода; порядок этапов сохраняется. */
@@ -709,7 +717,7 @@
     if (action.startsWith("robot.")) return clone(robotAction(action, b));
     switch (action) {
       // как на сервере: путь папки на ПК участникам не отдаётся — только признак linked
-      case "state": return clone({ ...st, today, archived_projects: st.archived_projects.map(({ id, name, emoji }) => ({ id, name, emoji })), projects: st.projects.map(({ local_dir, ...p }) => ({ ...p, linked: !!local_dir })) });
+      case "state": return clone({ ...st, today, upload_today: uploadToday(), archived_projects: st.archived_projects.map(({ id, name, emoji }) => ({ id, name, emoji })), projects: st.projects.map(({ local_dir, ...p }) => ({ ...p, linked: !!local_dir })) });
       case "episode.files": return clone(filesOf(Number(b.episode_id)));
       case "voice.order": return voiceOrder(b);
       case "plan.list": adminOnly(); return clone({ rows: plan.filter((r) => r.status !== "skipped" && (!b.project_id || r.project_id === b.project_id)) });
@@ -900,6 +908,12 @@
         if (b.is_admin !== undefined && st.me.is_admin) ownerGuard(b.tg_id, !b.is_admin);
         if (b.name) m.name = b.name;
         if (b.is_admin !== undefined && st.me.is_admin) m.is_admin = !!b.is_admin;
+        if (b.timezone !== undefined) {
+          if (!st.me.is_owner) throw new Error("Часовой пояс участника меняет владелец");
+          const tz = String(b.timezone || "").trim();
+          if (tz) try { new Intl.DateTimeFormat("ru", { timeZone: tz }); } catch (_) { throw new Error("Неизвестный часовой пояс"); }
+          m.timezone = tz || null;
+        }
         return {};
       }
       default: throw new Error("mock: " + action);

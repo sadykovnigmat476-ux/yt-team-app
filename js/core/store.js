@@ -1,7 +1,7 @@
 // Состояние приложения: S — последний ответ state, ui — выбор на экране. Отсюда же запросы-изменения.
-import { api } from "./api.js?v=d723e8c5";
-import * as L from "./logic.js?v=f81f1930";
-import { haptic, nativeProgress } from "./tg.js?v=fe0abf91";
+import { api } from "./api.js?v=1e81587e";
+import * as L from "./logic.js?v=37ec8712";
+import { haptic, nativeProgress } from "./tg.js?v=3f1c2f7b";
 import { clearError, showError, toast } from "../ui/toast.js?v=c026fd86";
 
 export let S = null;

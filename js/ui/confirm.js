@@ -1,5 +1,5 @@
 // Вопрос перед необратимым: в Telegram — его окно, в браузере — своё (window.confirm в webview не всегда показывается).
-import { inTelegram, tg } from "../core/tg.js?v=fe0abf91";
+import { inTelegram, tg } from "../core/tg.js?v=3f1c2f7b";
 
 export function confirmBox(text, opt = {}) {
   if (inTelegram() && tg.showConfirm) return new Promise((res) => tg.showConfirm(text, (ok) => res(ok)));

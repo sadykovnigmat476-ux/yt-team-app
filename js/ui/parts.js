@@ -1,16 +1,16 @@
 // Куски разметки, общие для нескольких экранов.
-import { canFullscreen, openUrl, tg } from "../core/tg.js?v=fe0abf91";
-import { daysBetween, esc, fmt, formatTag, KINDS, langTag, META, projChannels, STAGES } from "../core/logic.js?v=f81f1930";
-import { chan, epHead, isActive, pc, render, S, stageInfo, store, topicBound, ui } from "../core/store.js?v=be556fd4";
+import { canFullscreen, openUrl, tg } from "../core/tg.js?v=3f1c2f7b";
+import { daysBetween, esc, fmt, formatTag, KINDS, langTag, META, projChannels, STAGES } from "../core/logic.js?v=37ec8712";
+import { chan, epHead, isActive, pc, render, S, stageInfo, store, topicBound, ui } from "../core/store.js?v=0b379ff0";
 import { toast } from "./toast.js?v=c026fd86";
 import { icon } from "./icons.js?v=2008de79";
 
 export const initial = (m) => esc(((m && m.name) || "?").slice(0, 1).toUpperCase());
 
-export function dueBadge(d, done) {
+export function dueBadge(d, done, today = S.today) {
   if (!d) return "";
   if (done) return `<span class="badge ok" aria-label="готово">${icon("check")}</span>`;
-  const n = daysBetween(S.today, d);
+  const n = daysBetween(today, d);
   const cls = n < 0 ? "late" : n === 0 ? "today" : "";
   return `<span class="badge ${cls}">${n < 0 ? icon("alert") : ""}${fmt(d)}</span>`;
 }
@@ -109,7 +109,7 @@ export const actions = {
 };
 
 // ---------- общее для экранов команды ----------
-import { proj as projectOf } from "../core/store.js?v=be556fd4";
+import { proj as projectOf } from "../core/store.js?v=0b379ff0";
 
 /** Пустое место с объяснением: что здесь будет и что сделать. extra — готовая разметка кнопок. */
 export function emptyBlock(iconName, title, hint, extra = "") {

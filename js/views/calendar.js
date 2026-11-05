@@ -1,14 +1,14 @@
 // «Календарь»: выходы и сроки этапов по дням.
-import { api } from "../core/api.js?v=d723e8c5";
+import { api } from "../core/api.js?v=1e81587e";
 import { byId } from "../core/dom.js?v=3f6425ae";
-import { addDays, dayEvents as dayEventsOf, esc, fmt, formatTag, META, MONTHS, PREV, WD, weekday } from "../core/logic.js?v=f81f1930";
-import { currentRoute } from "../core/router.js?v=5020c62a";
-import { act, ep, epHead, episodeDone, epTasks, mem, pc, pcolor, proj, projChannels, render, S, store, ui } from "../core/store.js?v=be556fd4";
-import { haptic } from "../core/tg.js?v=fe0abf91";
-import { confirmBox } from "../ui/confirm.js?v=1dd10cfc";
+import { addDays, dayEvents as dayEventsOf, esc, fmt, formatTag, META, MONTHS, PREV, WD, weekday } from "../core/logic.js?v=37ec8712";
+import { currentRoute } from "../core/router.js?v=0766b364";
+import { act, ep, epHead, episodeDone, epTasks, mem, pc, pcolor, proj, projChannels, render, S, store, ui } from "../core/store.js?v=0b379ff0";
+import { haptic } from "../core/tg.js?v=3f1c2f7b";
+import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, projectChips, sheetHead } from "../ui/parts.js?v=7166efce";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=2617d096";
+import { emptyBlock, projectChips, sheetHead } from "../ui/parts.js?v=cbd257cd";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=4f25eb6b";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 const dayEvents = (d) => dayEventsOf(S, d, ui.project);
