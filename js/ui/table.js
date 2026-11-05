@@ -1,6 +1,6 @@
 // Таблица рабочей панели: cols — [{title, align?, cell(row)}]; cell отдаёт готовую (уже экранированную) разметку.
 // Широкая таблица прокручивается внутри своего блока, страница вбок не едет.
-import { esc } from "../core/logic.js?v=37ec8712";
+import { esc } from "../core/logic.js?v=27fff957";
 
 export function table(cols, rows, opt = {}) {
   if (!rows.length) return `<div class="empty">${esc(opt.empty || "Пока пусто")}</div>`;

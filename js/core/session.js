@@ -1,7 +1,7 @@
 // Чем приложение подписывает запросы. Внутри Telegram — initData, как и раньше; в браузере — сессия (x-session).
 // Токен лежит только в localStorage (его видят все вкладки) и уходит только заголовком: в адрес он не попадает.
-import { api } from "./api.js?v=1e81587e";
-import { inTelegram, MOCK, qs, tg } from "./tg.js?v=3f1c2f7b";
+import { api } from "./api.js?v=f1e8780b";
+import { inTelegram, MOCK, qs, tg } from "./tg.js?v=f1d7ce1d";
 import { showError } from "../ui/toast.js?v=c026fd86";
 
 const KEY = "yt.session";

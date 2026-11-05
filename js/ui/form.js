@@ -1,5 +1,5 @@
 // Поля форм и проверка «есть несохранённое».
-import { esc } from "../core/logic.js?v=37ec8712";
+import { esc } from "../core/logic.js?v=27fff957";
 
 /** Подпись + поле. control — готовая разметка поля. */
 export const field = (label, control, hint) =>

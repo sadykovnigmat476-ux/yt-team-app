@@ -202,6 +202,24 @@ export function epBtn(S, e) {
 }
 /** Сжатый график: срок сценария уже в прошлом (зеркало isCompressed на сервере). */
 export const isCompressedFor = (S, p, publishDate) => !!publishDate && addDays(publishDate, -(p.script_offset || 0)) < S.today;
+/** Дата годится под дни выхода проекта (зеркало publishDayFits на сервере). */
+export function publishDayFits(p, date) {
+  if (!p || !p.publish_days) return true;
+  return (Number(date.slice(8, 10)) % 2 === 0) === (p.publish_days === "even");
+}
+export function nextPublishDay(p, from) {
+  let d = from;
+  while (!publishDayFits(p, d)) d = addDays(d, 1);
+  return d;
+}
+/** Напоминание о днях выхода (зеркало publishDaysNote на сервере). */
+export function publishDaysNote(p, date) {
+  if (!p || !p.publish_days) return null;
+  const days = p.publish_days === "even" ? "чётные" : "нечётные";
+  if (!date || publishDayFits(p, date)) return { fits: true, text: `Дни выхода «${p.name}» — ${days} числа.` };
+  const other = p.publish_days === "even" ? "нечётное" : "чётное";
+  return { fits: false, text: `${fmt(date)} — ${other} число. Дни выхода «${p.name}» — ${days}, ближайшая подходящая дата: ${fmt(nextPublishDay(p, date))}.` };
+}
 export const projChannels = (S, pid) => S.channels.filter((c) => c.project_id === pid).sort((a, b) => a.sort - b.sort);
 const chSort = (S, t) => (chanOf(S, t.channel_id) || { sort: -1 }).sort;
 

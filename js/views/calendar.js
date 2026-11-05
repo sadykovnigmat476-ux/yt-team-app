@@ -1,14 +1,14 @@
 // «Календарь»: выходы и сроки этапов по дням.
-import { api } from "../core/api.js?v=1e81587e";
+import { api } from "../core/api.js?v=f1e8780b";
 import { byId } from "../core/dom.js?v=3f6425ae";
-import { addDays, dayEvents as dayEventsOf, esc, fmt, formatTag, META, MONTHS, PREV, WD, weekday } from "../core/logic.js?v=37ec8712";
-import { currentRoute } from "../core/router.js?v=0766b364";
-import { act, ep, epHead, episodeDone, epTasks, mem, pc, pcolor, proj, projChannels, render, S, store, ui } from "../core/store.js?v=0b379ff0";
-import { haptic } from "../core/tg.js?v=3f1c2f7b";
-import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
+import { addDays, dayEvents as dayEventsOf, esc, fmt, formatTag, META, MONTHS, nextPublishDay, PREV, publishDaysNote, WD, weekday } from "../core/logic.js?v=27fff957";
+import { currentRoute } from "../core/router.js?v=27d33f38";
+import { act, ep, epHead, episodeDone, epTasks, mem, pc, pcolor, proj, projChannels, render, S, store, ui } from "../core/store.js?v=e0f3245a";
+import { haptic } from "../core/tg.js?v=f1d7ce1d";
+import { confirmBox } from "../ui/confirm.js?v=24d167ee";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, projectChips, sheetHead } from "../ui/parts.js?v=cbd257cd";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=4f25eb6b";
+import { emptyBlock, projectChips, sheetHead } from "../ui/parts.js?v=2e46b762";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=53eb9974";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 const dayEvents = (d) => dayEventsOf(S, d, ui.project);
@@ -110,15 +110,22 @@ function planView() {
   return html;
 }
 
+/** Напоминание о днях выхода в форме темы. */
+function planDaysNote(p, date) {
+  const n = publishDaysNote(p, date);
+  return n ? `<div class="note${n.fits ? "" : " warn"}">${esc(n.text)}</div>` : "";
+}
+
 function planSheet(draft) {
   return () => {
     const p = proj(draft.project_id) || S.projects[0];
     return `${sheetHead(draft.id ? "Тема" : "Новая тема")}
     <div class="card">
-      <label class="f"><span>Проект</span><select class="inp" id="pl-project">${S.projects.map((x) => `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${esc(x.emoji)} ${esc(x.name)}</option>`).join("")}</select></label>
+      <label class="f"><span>Проект</span><select class="inp" id="pl-project" data-act-change="pl-days">${S.projects.map((x) => `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${esc(x.emoji)} ${esc(x.name)}</option>`).join("")}</select></label>
       <label class="f"><span>Тема выпуска</span><input class="inp" id="pl-title" data-enter="plan-save" value="${esc(draft.title)}" placeholder="Переход Ганнибала через Альпы"></label>
-      <div class="grid2"><label class="f"><span>Дата выхода</span><input class="inp" type="date" id="pl-date" value="${draft.publish_date}"></label>
+      <div class="grid2"><label class="f"><span>Дата выхода</span><input class="inp" type="date" id="pl-date" data-act-input="pl-days" value="${draft.publish_date}"></label>
       <label class="f"><span>Заметка (2D, 3D…)</span><input class="inp" id="pl-notes" value="${esc(draft.notes || "")}" placeholder="3D"></label></div>
+      <div id="pl-days">${planDaysNote(p, draft.publish_date)}</div>
       <div class="muted small">Выпуск появится сам за ${leadDays(p)} дн. до выхода. Заведёшь его раньше руками — тема привяжется к нему.</div>
     </div>
     <button class="btn block dup-main" data-act="plan-save">Сохранить</button>`;
@@ -128,9 +135,14 @@ function planSheet(draft) {
 let planDraft = null;
 function openPlanForm(row) {
   const pid = row ? row.project_id : ui.project !== "all" ? Number(ui.project) : S.projects[0].id;
-  const draft = row ? { ...row } : { id: 0, project_id: pid, title: "", publish_date: addDays(S.today, 7), notes: "" };
+  const draft = row ? { ...row } : { id: 0, project_id: pid, title: "", publish_date: nextPublishDay(proj(pid), addDays(S.today, 7)), notes: "" };
   planDraft = draft;
   openSheet(planSheet(draft), () => ({ main: { text: "Сохранить тему", run: () => actions["plan-save"](null) } }));
+}
+
+function paintPlanDays() {
+  const box = byId("pl-days");
+  if (box) box.innerHTML = planDaysNote(proj(Number(byId("pl-project").value)), byId("pl-date").value);
 }
 
 export function view() {
@@ -144,6 +156,8 @@ export const refresh = enter;
 
 export const actions = {
   "cal-mode": (el) => { mode = el.dataset.v === "plan" ? "plan" : "dates"; store("calMode", mode); if (planOn()) loadPlan(); render(); },
+  "input:pl-days": () => paintPlanDays(),
+  "change:pl-days": () => paintPlanDays(),
   "plan-retry": () => { plan.error = null; loadPlan(); },
   "plan-add": () => openPlanForm(null),
   "plan-edit": (el) => { const r = plan.rows && plan.rows.find((x) => x.id === Number(el.dataset.id)); if (r) openPlanForm(r); },

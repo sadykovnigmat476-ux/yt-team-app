@@ -23,9 +23,9 @@
       ...(asAdmin ? [{ tg_id: 3, name: "Админ", username: "admin2", is_admin: true, can_dm: true }] : []),
     ],
     projects: [
-      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1, local_dir: "F:/Скрытая физика", runner_enabled: true },
+      { id: 1, name: "Скрытая Физика", emoji: "🔭", thread_id: null, drive_folder_id: "1_i-_n5wWFz_ZONW5ksUO7F08V3hQrXRq", voice_days: 0, cadence_days: 7, publish_days: "odd", script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 1, local_dir: "F:/Скрытая физика", runner_enabled: true },
       { id: 2, name: "Тактика Боя", emoji: "⚔️", thread_id: 12, cadence_days: 7, script_offset: 7, voice_offset: 5, edit_offset: 3, upload_offset: 0, sort: 2, local_dir: "F:/Тактика Боя", runner_enabled: true },
-      { id: 3, name: "Channel #1", emoji: "🪐", thread_id: null, cadence_days: 4, script_offset: 6, voice_offset: 4, edit_offset: 2, upload_offset: 0, sort: 3 },
+      { id: 3, name: "Channel #1", emoji: "🪐", thread_id: null, cadence_days: 4, publish_days: "even", script_offset: 6, voice_offset: 4, edit_offset: 2, upload_offset: 0, sort: 3 },
     ],
     channels: [], episodes: [], tasks: [], links: [], roles: [],
     // как project.restore на сервере: архив виден админу и возвращается одной кнопкой
@@ -749,7 +749,9 @@
         const p = proj(b.project_id);
         const last = st.episodes.filter((e) => e.project_id === p.id).map((e) => e.publish_date).sort().pop();
         const early = add(today, p.script_offset);
-        const date = last ? [add(last, p.cadence_days), early].sort().pop() : early;
+        const fits = (d) => !p.publish_days || (Number(d.slice(8, 10)) % 2 === 0) === (p.publish_days === "even");
+        let date = p.publish_days ? [last ? add(last, 1) : early, early].sort().pop() : last ? [add(last, p.cadence_days), early].sort().pop() : early;
+        while (!fits(date)) date = add(date, 1);
         const pub = b.publish_date || date;
         // ничейная папка с похожим названием: её номер не занят, выпуск возьмёт её, а не создаст новую
         const folder = b.title && orphans.find((o) => o.project_id === p.id && similarity(b.title, o.name) >= 0.6);
@@ -806,7 +808,7 @@
         let p = st.projects.find((x) => x.id === b.id);
         if (!p) { p = { id: Math.max(...st.projects.map((x) => x.id)) + 1, thread_id: null }; st.projects.push(p); }
         if (!st.me.is_admin) throw new Error("Только для админа команды");
-        for (const k of ["name", "emoji", "cadence_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days", "color"]) p[k] = b[k];
+        for (const k of ["name", "emoji", "cadence_days", "publish_days", "script_offset", "voice_offset", "edit_offset", "upload_offset", "voice_days", "color"]) p[k] = b[k];
         // как на сервере: переключатель робота — только владельцу, чужое значение игнорируется
         if (b.runner_enabled !== undefined && st.me.is_owner) {
           if (b.runner_enabled && !p.runner_enabled) for (const m of rbEps) if (m.pid === p.id && !rbRuns(m).length) m.manual = true;

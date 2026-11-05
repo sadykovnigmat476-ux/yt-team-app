@@ -1,15 +1,15 @@
 // «Настройки»: команда, проекты, Диск, напоминания; форма проекта.
-import { api } from "../core/api.js?v=1e81587e";
+import { api } from "../core/api.js?v=f1e8780b";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=37ec8712";
-import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=0b379ff0";
-import { go } from "../core/router.js?v=0766b364";
-import * as session from "../core/session.js?v=1e81587e";
-import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=3f1c2f7b";
-import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
+import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=27fff957";
+import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=e0f3245a";
+import { go } from "../core/router.js?v=27d33f38";
+import * as session from "../core/session.js?v=f1e8780b";
+import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=f1d7ce1d";
+import { confirmBox } from "../ui/confirm.js?v=24d167ee";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=cbd257cd";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=4f25eb6b";
+import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=2e46b762";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=53eb9974";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
@@ -105,7 +105,8 @@ function projectSheet(draft) {
       <label class="f grow"><span>Название</span><input class="inp" data-pf="name" value="${esc(draft.name)}" placeholder="Скрытая Физика"></label></div>
       <label class="f"><span>Цвет проекта — полоска на карточках и точки в календаре</span><div class="swatches">${PALETTE.map((c) => `<button class="swatch ${(draft.color || draft.autoColor) === c ? "on" : ""}" style="--pc:${c}" data-act="pick-color" data-c="${c}" aria-label="цвет ${c}"></button>`).join("")}</div></label>
       <label class="f"><span>Папка проекта на Google Диске (ссылка)</span><input class="inp" data-pf="drive_folder" value="${esc(draft.drive_folder)}" placeholder="https://drive.google.com/drive/folders/…"></label>
-      <label class="f"><span>Выпуск каждые N дней (дата выхода нового выпуска)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
+      <label class="f"><span>Дни выхода</span><select class="inp" data-pf="publish_days">${[["", "Любые — шаг «каждые N дней»"], ["even", "Чётные числа"], ["odd", "Нечётные числа"]].map(([v, n]) => `<option value="${v}" ${(draft.publish_days || "") === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label class="f"><span>Выпуск каждые N дней (дата выхода нового выпуска; при чётных или нечётных числах не считается)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
       <label class="f"><span>Озвучка: через сколько дней после сценария (0 — в тот же день; пусто — по дате выхода)</span><input class="inp" type="number" min="0" data-pf="voice_days" value="${draft.voice_days ?? ""}"></label>
       <span class="muted small">За сколько дней до выхода должен быть готов этап:</span>
       <div class="grid4">${STAGES.map((s) => `<label class="f"><span>${META[s].n}</span><input class="inp" type="number" min="0" data-pf="${s}_offset" value="${draft[s + "_offset"]}"></label>`).join("")}</div>

@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=1e81587e";
+import { api } from "../core/api.js?v=f1e8780b";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, STAGES, voiceHint } from "../core/logic.js?v=37ec8712";
-import { go } from "../core/router.js?v=0766b364";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=0b379ff0";
-import { haptic, openUrl } from "../core/tg.js?v=3f1c2f7b";
-import { confirmBox } from "../ui/confirm.js?v=5a21b83c";
+import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint } from "../core/logic.js?v=27fff957";
+import { go } from "../core/router.js?v=27d33f38";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=e0f3245a";
+import { haptic, openUrl } from "../core/tg.js?v=f1d7ce1d";
+import { confirmBox } from "../ui/confirm.js?v=24d167ee";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=cbd257cd";
-import { questionBlock } from "../ui/question.js?v=69c8f4bf";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=4f25eb6b";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=2e46b762";
+import { questionBlock } from "../ui/question.js?v=38a2446a";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=53eb9974";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */
@@ -28,6 +28,12 @@ function episodeNative(id) {
 }
 
 /** «Сжатый график» под датой выхода: при создании и при переносе. */
+/** Напоминание о днях выхода: обычная строка, если дата подходит, и предупреждение, если нет. */
+function publishNote(p, date) {
+  const n = publishDaysNote(p, date);
+  return n ? `<div class="note${n.fits ? "" : " warn"}">${esc(n.text)}</div>` : "";
+}
+
 function compressNote(p, date) {
   return isCompressedFor(p, date) ? `<div class="note warn">Сжатый график: сценарий нужен сегодня, остальные этапы идут подряд до выхода.</div>` : "";
 }
@@ -244,7 +250,7 @@ function episodeSheet(id) {
         <label class="f"><span>Название</span><input class="inp" data-act-change="ep-field" data-field="title"${kp("f-title")} value="${esc(e.title)}"></label>
         <div class="grid2"><label class="f"><span>Код</span><input class="inp" data-act-change="ep-field" data-field="code"${kp("f-code")} value="${esc(e.code)}"></label>
         <label class="f"><span>Дата выхода</span><input class="inp" type="date" data-act-change="ep-field" data-act-input="ep-date" data-field="publish_date"${kp("f-date")} value="${e.publish_date}"></label></div>
-        <div id="ep-compress">${compressNote(p, e.publish_date)}</div>
+        <div id="ep-compress">${compressNote(p, e.publish_date)}${released ? "" : publishNote(p, e.publish_date)}</div>
         <div class="muted small">Сроки этапов пересчитаются от даты выхода. Срок выкладки и дата выхода — одно и то же: поменяешь одно, поменяется и другое.</div>
       </div>
       <h2 class="between">Этапы${S.me.is_admin && open.length ? `<select class="sel-sm" data-act-change="assign-all" data-ids="${open.map((t) => t.id).join(",")}" aria-label="Назначить все открытые этапы одному человеку"><option value="">Назначить всех…</option>${S.members.map((m) => `<option value="${m.tg_id}">${esc(m.name)}</option>`).join("")}<option value="none">— никого</option></select>` : ""}</h2>`;
@@ -271,11 +277,11 @@ function episodeSheet(id) {
 /** Хотя бы один канал уже отмечен как выложенный — у выпуска есть что смотреть в статистике. */
 const episodeStarted = (e) => epTasks(e.id).some((t) => t.stage === "upload" && t.done_at);
 
-/** Подсказки формы нового выпуска: сжатый график, чужая папка, сроки. Обновляются на месте, без перерисовки полей. */
+/** Подсказки формы нового выпуска: дни выхода, сжатый график, чужая папка, сроки. Обновляются на месте, без перерисовки полей. */
 function newEpHints(st) {
   const p = proj(st.project_id) || S.projects[0];
   const compressed = st.compressed != null ? st.compressed : isCompressedFor(p, st.date);
-  let html = "";
+  let html = publishNote(p, st.date);
   if (compressed) html += `<div class="note warn">Сжатый график: сценарий нужен сегодня, остальные этапы идут подряд до выхода.</div>`;
   if (st.folder) {
     html += `<label class="note check-note"><input type="checkbox" id="ne-usefolder" data-act-change="ne-usefolder"${kp("ne-usefolder")} ${st.useFolder ? "checked" : ""}>
@@ -434,7 +440,7 @@ export const actions = {
   // перенос даты у существующего выпуска: предупреждение о сжатом графике сразу, до сохранения
   "input:ep-date": (el) => {
     const e = ep(openEpisodeId()), box = byId("ep-compress");
-    if (e && box) box.innerHTML = compressNote(proj(e.project_id), el.value);
+    if (e && box) box.innerHTML = compressNote(proj(e.project_id), el.value) + publishNote(proj(e.project_id), el.value);
   },
   "change:ne-usefolder": (el) => { if (ui.newEp) { ui.newEp.useFolder = el.checked; paintNewEpisode(ui.newEp); } },
   "change:ne-project": (el) => {
