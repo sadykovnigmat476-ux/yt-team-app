@@ -1,6 +1,6 @@
 // Адреса экранов: ?tab=…&ep=… через history.pushState. Каждая открытая шторка — запись в истории
 // ({depth}), поэтому «Назад» браузера, телефона и Telegram закрывает верхнюю, а не уводит из приложения.
-import { buildUrl, guardTab, parseRoute, SCREENS, TABS } from "./logic.js?v=c38baec6";
+import { buildUrl, guardTab, parseRoute, SCREENS, TABS } from "./logic.js?v=f81f1930";
 
 let route = { tab: "now", ep: null, run: null };
 let hooks = { depth: () => 0, closeAll: () => Promise.resolve(true), onPop: () => Promise.resolve(), render: () => {}, enter: () => {}, remember: () => {}, stored: () => null, owner: () => false };

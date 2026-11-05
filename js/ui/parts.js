@@ -1,7 +1,7 @@
 // Куски разметки, общие для нескольких экранов.
-import { canFullscreen, openUrl, tg } from "../core/tg.js?v=d0923368";
-import { daysBetween, esc, fmt, formatTag, KINDS, langTag, META, projChannels, STAGES } from "../core/logic.js?v=c38baec6";
-import { chan, epHead, isActive, pc, render, S, stageInfo, store, topicBound, ui } from "../core/store.js?v=5b428fdb";
+import { canFullscreen, openUrl, tg } from "../core/tg.js?v=fe0abf91";
+import { daysBetween, esc, fmt, formatTag, KINDS, langTag, META, projChannels, STAGES } from "../core/logic.js?v=f81f1930";
+import { chan, epHead, isActive, pc, render, S, stageInfo, store, topicBound, ui } from "../core/store.js?v=be556fd4";
 import { toast } from "./toast.js?v=c026fd86";
 import { icon } from "./icons.js?v=2008de79";
 
@@ -109,7 +109,7 @@ export const actions = {
 };
 
 // ---------- общее для экранов команды ----------
-import { proj as projectOf } from "../core/store.js?v=5b428fdb";
+import { proj as projectOf } from "../core/store.js?v=be556fd4";
 
 /** Пустое место с объяснением: что здесь будет и что сделать. extra — готовая разметка кнопок. */
 export function emptyBlock(iconName, title, hint, extra = "") {

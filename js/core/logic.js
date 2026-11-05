@@ -224,7 +224,8 @@ export function stageInfo(S, eid, stage) {
   const ts = epTasks(S, eid).filter((t) => t.stage === stage).sort((a, b) => chSort(S, a) - chSort(S, b));
   const done = ts.filter((t) => t.done_at).length;
   const active = ts.filter((t) => isActive(S, t)).length;
-  const due = ts.map((t) => t.due_date).filter(Boolean).sort()[0] || null;
+  // срок этапа — по открытым задачам: перенос закрытые не трогает, их старая дата не в счёт; всё закрыто — последняя показанная
+  const due = ts.filter((t) => t.due_date && (done === ts.length || !t.done_at)).map((t) => t.due_date).sort()[0] || null;
   const late = done < ts.length && active > 0 && due && due < S.today;
   return { ts, done, total: ts.length, active, due, late };
 }
