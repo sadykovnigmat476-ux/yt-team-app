@@ -142,6 +142,7 @@ h2.between { justify-content: space-between; }
 .wait h2 + .wait-row { border-top: 0; }
 .wait-ic { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 50%; background: var(--warn-bg); color: var(--warn); }
 .wait-row.bad .wait-ic { background: var(--danger-bg); color: var(--danger); }
+.wait-row.wait-q { align-items: flex-start; }
 .wait-text { color: var(--text-2); overflow-wrap: anywhere; }
 .calm-line { display: flex; align-items: center; gap: var(--sp-2); border-left-color: var(--ok-fill); }
 

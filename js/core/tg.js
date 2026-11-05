@@ -1,5 +1,5 @@
 // Всё про Telegram: объект WebApp, тема, нативные кнопки. В браузере и на моке tg может не быть — проверки на месте.
-import { themeTokens } from "./logic.js?v=470b6fea";
+import { themeTokens } from "./logic.js?v=c38baec6";
 
 export const qs = new URLSearchParams(location.search);
 export const MOCK = qs.has("mock");

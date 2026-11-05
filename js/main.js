@@ -1,28 +1,29 @@
 // Запуск: связывает ядро, экраны и оболочку (меню, шапка, подсказки вида). Логики экранов здесь нет.
-import { api } from "./core/api.js?v=19a8d20a";
+import { api } from "./core/api.js?v=531be1d4";
 import { bindEvents } from "./core/dom.js?v=3f6425ae";
-import { buildUrl, esc, guardTab, markTappable, moreTabs, phoneNav, shouldPoll, sideTabs, TABS, updatedLabel } from "./core/logic.js?v=470b6fea";
+import { buildUrl, esc, guardTab, markTappable, moreTabs, phoneNav, shouldPoll, sideTabs, TABS, updatedLabel } from "./core/logic.js?v=c38baec6";
 import { morph } from "./core/morph.js?v=b4de8c1c";
-import { currentRoute, go, initRouter, parentOf, titleOf, writeHistory } from "./core/router.js?v=06c283eb";
-import { needsLogin } from "./core/session.js?v=19a8d20a";
-import { act, ep, isBusy, load, refresh, render as requestRender, S, setRenderer, store, ui } from "./core/store.js?v=1246c5bb";
-import { initTelegram, MOCK, setBackVisible, setNative, tg } from "./core/tg.js?v=a2517d83";
+import { currentRoute, go, initRouter, parentOf, titleOf, writeHistory } from "./core/router.js?v=ac21beab";
+import { needsLogin } from "./core/session.js?v=531be1d4";
+import { act, ep, isBusy, load, refresh, render as requestRender, S, setRenderer, store, ui } from "./core/store.js?v=5b428fdb";
+import { initTelegram, MOCK, setBackVisible, setNative, tg } from "./core/tg.js?v=d0923368";
 import { icon, spriteMarkup } from "./ui/icons.js?v=2008de79";
-import { actions as partsActions, initial, sheetHead } from "./ui/parts.js?v=4f5be782";
-import { closeAllSheets, closeSheet, onSheetsChanged, openSheet, refitSheets, repaintSheets, sheetDepth, syncToDepth } from "./ui/sheet.js?v=926c9316";
+import { actions as partsActions, initial, sheetHead } from "./ui/parts.js?v=f1715159";
+import { actions as questionActions } from "./ui/question.js?v=582e8460";
+import { closeAllSheets, closeSheet, onSheetsChanged, openSheet, refitSheets, repaintSheets, sheetDepth, syncToDepth } from "./ui/sheet.js?v=1a030604";
 import { skeleton } from "./ui/skeleton.js?v=72d04fb7";
 import { toast } from "./ui/toast.js?v=c026fd86";
-import * as calendar from "./views/calendar.js?v=4e001fda";
-import * as episode from "./views/episode.js?v=a4e2b560";
-import * as episodes from "./views/episodes.js?v=83ebd1c6";
-import * as login from "./views/login.js?v=64b533b2";
-import * as now from "./views/now.js?v=4a2e2528";
-import * as review from "./views/review.js?v=508a9a82";
-import * as robot from "./views/robot.js?v=c5e23fc1";
-import * as robot_settings from "./views/robot_settings.js?v=2fb73127";
-import * as settings from "./views/settings.js?v=779bde66";
-import * as setup from "./views/setup.js?v=5e8b27d6";
-import * as stats from "./views/stats.js?v=a78d3397";
+import * as calendar from "./views/calendar.js?v=954ce73c";
+import * as episode from "./views/episode.js?v=0fd76321";
+import * as episodes from "./views/episodes.js?v=1b4d0ad0";
+import * as login from "./views/login.js?v=e933a09a";
+import * as now from "./views/now.js?v=b2b180a5";
+import * as review from "./views/review.js?v=4e1117b4";
+import * as robot from "./views/robot.js?v=4e896359";
+import * as robot_settings from "./views/robot_settings.js?v=b50ab35a";
+import * as settings from "./views/settings.js?v=36d33bcd";
+import * as setup from "./views/setup.js?v=927c9ae0";
+import * as stats from "./views/stats.js?v=ce201cde";
 
 const VIEWS = { now, episodes, calendar, stats, settings, robot, review, robot_settings, setup, login };
 const ctx = { get S() { return S; }, ui, go, act, api };
@@ -117,7 +118,7 @@ function refreshScreen() {
   return refresh();
 }
 
-const handlers = Object.assign({}, partsActions, episode.actions, ...Object.values(VIEWS).map((v) => v.actions || {}), shellActions);
+const handlers = Object.assign({}, partsActions, questionActions, episode.actions, ...Object.values(VIEWS).map((v) => v.actions || {}), shellActions);
 
 // ---------- запуск ----------
 function loadScript(src) {

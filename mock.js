@@ -183,6 +183,23 @@
   const UNTIL_LAST = { script: 0, voice: 1, montage: 3, end: 5 };
   const UNTIL_GEN = { script: "сценария", voice: "озвучки", montage: "монтажа", end: "конца" };
   const PHASE_NAME = { script: "сценарий", voice: "озвучка", montage: "монтаж", changes: "правки", final: "финал", accept: "приёмка" };
+  // вопрос робота: держит выпуск, пока владелец не ответит (nextRobotPhase)
+  const rbQuestions = [{
+    id: 40, episode_id: 5, status: "open", answer: null, at: isoAgo(50), why: "В сценарии битва дана с двух сторон, а на сцену хватит одной карты.",
+    text: "Какую сторону показывать на карте битвы при Киноскефалах первой?", options: ["Македонцы: фаланга идёт вверх по склону", "Римляне: манипулы на правом фланге"],
+  }];
+  const openQuestion = (id) => rbQuestions.find((q) => q.episode_id === id && q.status === "open") || null;
+  const questionView = (q) => ({ id: q.id, text: q.text, why: q.why, options: q.options, at: q.at });
+  function answerQuestion(b) {
+    const q = rbQuestions.find((x) => x.id === Number(b.question_id));
+    if (!q) throw new Error("Вопрос " + b.question_id + " не найден");
+    if (q.status !== "open") throw new Error("На этот вопрос уже ответили: " + q.answer);
+    const own = String(b.text ?? "").trim();
+    const answer = own || q.options[Number(b.option)];
+    if (!answer) throw new Error(b.option == null ? "Выбери вариант или напиши свой ответ" : "Такого варианта нет");
+    Object.assign(q, { status: "answered", answer });
+    return { ok: true, label: (rbEps.find((m) => m.id === q.episode_id) || {}).label, text: "Ответ записан: " + answer };
+  }
   const rbUntil = {};
   const untilOf = (m) => m.own || rbUntil[m.pid] || "end";
   const allowedPhase = (ph, u) => PHASES.indexOf(ph) <= UNTIL_LAST[u];
@@ -254,6 +271,7 @@
     // как на сервере: проверка ждёт человека, а не робота — пауза её не останавливает
     if (m.kind === "review") return { where: "👀 ждёт твоей проверки 5 ч", tone: "owner" };
     if (m.kind === "accept") return { where: "👀 ждёт твоей приёмки 35 мин", tone: "owner" };
+    if (openQuestion(m.id)) return { where: "❓ ждёт твоего ответа", tone: "owner" };
     if (rb.paused) return { where: "⏸ робот остановлен — выпуск ждёт запуска", tone: "stop" };
     switch (m.kind) {
       case "running": return { where: "🤖 делает: монтаж, часть 3 · ПК NIGMAT-PC", tone: "work" };
@@ -275,8 +293,10 @@
     const run = rbRun(m);
     const u = untilOf(m);
     // шаги за пределом робота — «вручную» (как robotTrack на сервере)
+    const asked = openQuestion(m.id);
     const track = rbTrack(m, allowed, rb.paused).map((x) => {
       const ph = STEP_PHASE[x.key];
+      if (asked && x.key === "montage") return { ...x, state: "wait", detail: "ждёт твоего ответа" };
       return ph && !allowedPhase(ph, u) && !x.detail ? { ...x, detail: "вручную" } : x;
     });
     return {
@@ -285,10 +305,11 @@
       ...w, track, run,
       manual: !!m.manual,
       review: run && run.status === "review" ? { run_id: run.id, kind: run.phase === "accept" ? "accept" : "stills" } : null,
+      question: asked ? questionView(asked) : null,
       fail_kind: run && run.status === "failed" ? run.fail_kind || null : null,
       missing: run && run.status === "failed" ? missingOf(run.note) : [],
       alert: !m.manual && !rb.paused && RB_ALERT[m.kind] ? { kind: RB_ALERT[m.kind], run_id: run.id } : null,
-      next: NEXT_PHASE[m.kind] && !m.hold && !m.manual && !limitOf(m) ? { phase: NEXT_PHASE[m.kind], part: 1 } : null,
+      next: NEXT_PHASE[m.kind] && !m.hold && !m.manual && !limitOf(m) && !asked ? { phase: NEXT_PHASE[m.kind], part: 1 } : null,
       usage: { ...sumUsage(rbRuns(m)), lumean_tokens: 4800 },
     };
   }
@@ -296,7 +317,7 @@
     const S = (key, title, state, detail = null) => ({ key, title, state, detail });
     return {
       id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: false, now_until: null, robot_until: rbUntil[m.pid] || "end", robot_until_own: null,
-      manual: false, review: null, fail_kind: null, missing: [], alert: null, next: null, usage: { tokens: 412000, cost_usd: 6.1, hours: 7.4, runs: 6, lumean_tokens: 4800 },
+      manual: false, review: null, question: null, fail_kind: null, missing: [], alert: null, next: null, usage: { tokens: 412000, cost_usd: 6.1, hours: 7.4, runs: 6, lumean_tokens: 4800 },
       where: "✅ выложен " + m.pub, tone: "done",
       track: [S("topic", "Тема", "done", m.code), S("script", "Сценарий", "done"), S("voice", "Озвучка", "done", "5 из 5"), S("montage", "Монтаж", "done", "2 части"),
         S("review", "Проверка", "done"), S("changes", "Правки", "skip", "правок не было"), S("final", "Финал", "done", "заход 1 из 12"), S("accept", "Приёмка", "done", "Ок"), S("upload", "Выкладка", "done", m.pub)],
@@ -457,6 +478,8 @@
     if (b.op !== "rollback") throw new Error("op: retry, again, rollback");
     if (!ROLLBACK[b.phase]) throw new Error("phase: script, voice, montage, final");
     const info = rollbackInfo(m, b.phase);
+    // откат снимает открытые вопросы, как на сервере
+    if (!b.dry) for (const q of rbQuestions) if (q.episode_id === m.id && q.status === "open") q.status = "cancelled";
     if (b.dry) return { ok: true, ...info };
     for (const t of st.tasks.filter((x) => x.episode_id === m.id && info.reopen.includes(x.stage))) { t.done_at = null; t.done_by = null; }
     rb.markers[m.id] = (rb.markers[m.id] || []).concat({ phase: b.phase, at: new Date().toISOString() });
@@ -496,6 +519,10 @@
       const run = rbRun(m), base = { ...blank, label: m.label, episode_id: m.id, run_id: run && run.id };
       if (m.kind === "review") items.push({ ...base, id: "review:" + run.id, kind: "stills", action: "review", text: "Стоп-кадры ждут проверки", at: isoAgo(330) });
       if (m.kind === "accept") items.push({ ...base, id: "review:" + run.id, kind: "accept", action: "review", text: "Приёмка: красных проверок " + acceptReport(m).red, at: isoAgo(35) });
+    }
+    for (const q of rbQuestions.filter((x) => x.status === "open")) {
+      const m = rbEps.find((x) => x.id === q.episode_id);
+      items.push({ ...blank, ...questionView(q), id: "question:" + q.id, kind: "question", action: "answer", label: m ? m.label : "", episode_id: q.episode_id, question_id: q.id });
     }
     for (const m of rbEps) {
       if (m.hold || m.manual) continue;
@@ -588,6 +615,8 @@
       case "robot.limits": rb.limits = checkLimits(b.value); return { ok: true, value: { ...rb.limits } };
       case "robot.history": return historyOf(Number(b.episode_id));
       case "robot.inbox": return inbox();
+      case "robot.questions": return { questions: rbQuestions.filter((q) => q.status === "open" && (b.episode_id == null || q.episode_id === Number(b.episode_id))).map((q) => ({ ...questionView(q), episode_id: q.episode_id })) };
+      case "robot.answer": return answerQuestion(b);
       case "robot.hosts": return { hosts: rb.hosts };
       case "robot.pause": {
         rb.paused = !!b.paused;
@@ -608,7 +637,8 @@
       case "robot.episode": {
         const m = rbEps.find((x) => x.id === b.episode_id);
         if (!m) throw new Error("Выпуск не найден");
-        if (b.op === "mine") { const stopped = m.kind === "running" ? 1 : 0; m.manual = true; if (stopped) m.kind = "stopped"; return { ok: true, stopped }; }
+        // «Веду сам» снимает открытые вопросы, как на сервере: выпуск не должен висеть
+        if (b.op === "mine") { const stopped = m.kind === "running" ? 1 : 0; m.manual = true; if (stopped) m.kind = "stopped"; for (const q of rbQuestions) if (q.episode_id === m.id && q.status === "open") q.status = "cancelled"; return { ok: true, stopped }; }
         if (b.op === "give") { m.manual = false; return { ok: true, stopped: 0 }; }
         if (b.op === "accept") return { ok: true, text: "Приёмку прогонит ПК при следующем заходе" };
         if (b.op === "hold") { m.hold = true; if (m.kind === "running") m.kind = "stopped"; }

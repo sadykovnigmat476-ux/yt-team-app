@@ -83,6 +83,19 @@ textarea.inp { resize: vertical; min-height: 72px; padding: var(--sp-2); display
 /* Блоки текста */
 .note { border-radius: var(--radius); padding: var(--sp-2); margin: var(--sp-2) 0; font-size: var(--fs-sm); background: var(--accent-bg); }
 .note.warn { background: var(--warn-bg); }
+/* вопрос робота: варианты столбиком на телефоне, рядом на широком экране, длинный текст переносится */
+.q-block { display: grid; gap: var(--sp-2); margin: var(--sp-2) 0; min-width: 0; }
+.q-text { overflow-wrap: anywhere; white-space: pre-line; }
+.q-why { overflow-wrap: anywhere; }
+.q-opts { display: grid; gap: var(--sp-2); }
+.q-opt { width: 100%; min-height: 44px; height: auto; justify-content: flex-start; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.q-own { display: grid; gap: var(--sp-2); }
+.q-own textarea { min-height: 44px; resize: vertical; }
+.q-own .btn { justify-self: end; min-height: 44px; min-width: 112px; }
+@media (min-width: 600px) {
+  .q-opts { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .q-own { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+}
 .banner { display: flex; align-items: center; gap: var(--sp-2); background: var(--danger-bg); color: var(--danger); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3); font-size: var(--fs-sm); }
 .warn-line { display: flex; gap: var(--sp-2); align-items: flex-start; }
 

@@ -1,14 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=19a8d20a";
+import { api } from "../core/api.js?v=531be1d4";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, STAGES, voiceHint } from "../core/logic.js?v=470b6fea";
-import { go } from "../core/router.js?v=06c283eb";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=1246c5bb";
-import { haptic, openUrl } from "../core/tg.js?v=a2517d83";
-import { confirmBox } from "../ui/confirm.js?v=56ec688f";
+import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, STAGES, voiceHint } from "../core/logic.js?v=c38baec6";
+import { go } from "../core/router.js?v=ac21beab";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=5b428fdb";
+import { haptic, openUrl } from "../core/tg.js?v=d0923368";
+import { confirmBox } from "../ui/confirm.js?v=f36b2440";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=4f5be782";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=926c9316";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=f1715159";
+import { questionBlock } from "../ui/question.js?v=582e8460";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=1a030604";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */
@@ -46,6 +47,21 @@ function loadFiles(id) {
     .catch((e) => { c.error = e.message; })
     .finally(() => { c.loading = false; if (openEpisodeId() === id) render(); });
 }
+
+// ---------- вопросы робота ----------
+/** Открытые вопросы выпуска для шторки владельца: id → список. */
+const asked = new Map();
+
+function loadQuestions(id) {
+  if (!S.me.is_owner) return;
+  api("robot.questions", { episode_id: id })
+    .then((r) => { asked.set(id, r.questions); if (openEpisodeId() === id) render(); })
+    .catch(() => {}); // шторка живёт и без них: вопрос виден в «Ждёт тебя» и в пульте
+}
+
+document.addEventListener("question-answered", () => { const id = openEpisodeId(); if (id) loadQuestions(id); });
+
+const questionsSection = (id) => (asked.get(id) || []).map((q) => `<h2>${icon("info")}Вопрос робота</h2><div class="card">${questionBlock(q)}</div>`).join("");
 
 const BUSY_ORDER = ["queued", "ordering", "ordered"];
 
@@ -220,6 +236,7 @@ function episodeSheet(id) {
     const released = e.publish_date <= S.today;
     let html = `${sheetHead(epHead(e), pc(p))}
       ${progressBars(e.id)}
+      ${questionsSection(id)}
       ${managed ? `<div class="note robot-note">${icon("robot")}<span>Выпуск ведёт робот: этапы до выкладки закрывают файлы на Диске${S.me.is_owner ? " или ты" : " или владелец"}. Выкладка — как раньше, у Павла.</span>${S.me.is_owner ? `<button class="btn ghost sm" data-act="to-robot">Пульт</button>` : ""}</div>` : ""}
       ${e.drive_folder_id ? `<a class="btn block dup-second folder-btn" href="${esc(folderLink(e.drive_folder_id))}" data-act="open-link">${icon("folder")}Открыть папку на Диске</a>
         <div class="muted small note-line">Внутри: 1_Сценарий · 2_Озвучка · 3_Готовое видео. Кладите файлы — этапы отметятся сами.</div>` : ""}
@@ -330,6 +347,7 @@ export async function openEpisode(id, opts = {}) {
   if (inPanel && !opts.replace && !(await canLeave())) return;
   openSheet(episodeSheet(id), episodeNative(id), { mode: "panel", ep: id, replace: inPanel || opts.replace, silent: opts.silent });
   loadFiles(id);
+  loadQuestions(id);
 }
 
 const FIELD_KEYS = { title: "f-title", code: "f-code", publish_date: "f-date", notes: "f-notes" };

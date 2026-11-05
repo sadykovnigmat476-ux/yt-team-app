@@ -1,11 +1,11 @@
 // Настройки робота (владелец): ночное окно, повторы, потолки, «папка занята», горизонт. Неверное значение не сохраняется.
-import { api } from "../core/api.js?v=19a8d20a";
-import { esc } from "../core/logic.js?v=470b6fea";
-import { render, ui } from "../core/store.js?v=1246c5bb";
+import { api } from "../core/api.js?v=531be1d4";
+import { esc } from "../core/logic.js?v=c38baec6";
+import { render, ui } from "../core/store.js?v=5b428fdb";
 import { icon } from "../ui/icons.js?v=2008de79";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { loadRobot } from "./robot.js?v=c5e23fc1";
+import { loadRobot } from "./robot.js?v=4e896359";
 
 /** Зеркало пределов domain.ts (LIMIT_RULES): здесь — быстрая проверка до отправки, последнее слово за сервером. */
 const FIELDS = [

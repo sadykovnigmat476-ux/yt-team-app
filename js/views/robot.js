@@ -1,12 +1,13 @@
 // Пульт робота (владелец): все выпуски робота от темы до выкладки, расход, управление выпуском и история прогонок.
-import { api } from "../core/api.js?v=19a8d20a";
-import { agoText, esc, fmt, fmtNum, robotRescue } from "../core/logic.js?v=470b6fea";
-import { currentRoute, go } from "../core/router.js?v=06c283eb";
-import { act, isBusy, pc, proj, render, S, ui } from "../core/store.js?v=1246c5bb";
+import { api } from "../core/api.js?v=531be1d4";
+import { agoText, esc, fmt, fmtNum, robotRescue } from "../core/logic.js?v=c38baec6";
+import { currentRoute, go } from "../core/router.js?v=ac21beab";
+import { act, isBusy, pc, proj, render, S, ui } from "../core/store.js?v=5b428fdb";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { confirmBox } from "../ui/confirm.js?v=56ec688f";
-import { sheetHead } from "../ui/parts.js?v=4f5be782";
-import { openSheet } from "../ui/sheet.js?v=926c9316";
+import { confirmBox } from "../ui/confirm.js?v=f36b2440";
+import { sheetHead } from "../ui/parts.js?v=f1715159";
+import { questionBlock } from "../ui/question.js?v=582e8460";
+import { openSheet } from "../ui/sheet.js?v=1a030604";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
@@ -52,6 +53,7 @@ setInterval(() => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && onRobot() && !ui.robot.loading && Date.now() - ui.robot.at >= ROBOT_POLL_MS) loadRobot();
 });
+document.addEventListener("question-answered", () => { if (watching()) loadRobot(); });
 
 /** Действие пульта: через act() (замок, тост, ошибка), затем пульт перечитывается. */
 async function robotAct(action, body, msg, el) {
@@ -194,7 +196,7 @@ function robotEpisode(e, nowMs, withActs, d) {
   return `<div class="card pc-stripe rb-ep" data-key="rb-ep-${e.id}" style="${pc(p)}">
     <div class="row top"><div class="grow title break">${esc(e.label)}</div></div>
     ${badges ? `<div class="rb-badges">${badges}</div>` : ""}
-    ${whereLine(e)}${miss}
+    ${whereLine(e)}${miss}${e.question ? questionBlock(e.question) : ""}
     <div class="rb-steps">${(e.track || []).map(robotStep).join("")}</div>
     ${e.run ? robotRun(e.run, nowMs, d) : ""}
     <div class="rb-spend muted small">${icon("chart")}${esc(usageLine(e.usage))}</div>${acts}

@@ -149,6 +149,13 @@ export const materialCell = (row, key) => (key === "script" ? row.tts || row.scr
 /** Язык готов: на месте всё, что проекту нужно. */
 export const langReady = (row) => MATERIALS.every(([k]) => materialCell(row, k) === undefined || !!materialCell(row, k));
 
+/** Тело robot.answer: свой текст важнее варианта; нечего отправлять — null. */
+export function answerBody(id, { option, text } = {}) {
+  const own = String(text ?? "").trim();
+  if (own) return { question_id: id, text: own };
+  return Number.isInteger(option) && option >= 0 ? { question_id: id, option } : null;
+}
+
 /** Что можно сделать обязательным в пакете языка (REQUIRED_MATERIALS на сервере): ключ → подпись. */
 export const REQUIRED_MATERIALS = [["cover", "Обложка"], ["meta", "Метаданные"], ["srt", "Субтитры"], ["chapters", "Главы"]];
 

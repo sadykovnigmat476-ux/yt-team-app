@@ -1,20 +1,21 @@
 // «Сейчас»: что ждёт владельца, главная задача крупно, остальное по срочности.
-import { api } from "../core/api.js?v=19a8d20a";
-import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV } from "../core/logic.js?v=470b6fea";
-import { currentRoute, go } from "../core/router.js?v=06c283eb";
-import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=1246c5bb";
-import { openUrl } from "../core/tg.js?v=a2517d83";
+import { api } from "../core/api.js?v=531be1d4";
+import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV } from "../core/logic.js?v=c38baec6";
+import { currentRoute, go } from "../core/router.js?v=ac21beab";
+import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=5b428fdb";
+import { openUrl } from "../core/tg.js?v=d0923368";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=4f5be782";
+import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=f1715159";
+import { questionBlock } from "../ui/question.js?v=582e8460";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { openEpisode } from "./episode.js?v=a4e2b560";
-import { loadFolders, openFolderQuestion } from "./episodes.js?v=83ebd1c6";
-import { noEmoji } from "./robot.js?v=c5e23fc1";
+import { openEpisode } from "./episode.js?v=0fd76321";
+import { loadFolders, openFolderQuestion } from "./episodes.js?v=1b4d0ad0";
+import { noEmoji } from "./robot.js?v=4e896359";
 
 // ---------- «Ждёт тебя»: решения владельца в одном списке ----------
 const inbox = { data: null, error: null, loading: false, all: false };
 
-/** Проверки, приёмки, сбои, потолки, вопросы по папкам, нехватка токенов. Только владельцу. */
+/** Проверки, приёмки, вопросы робота, сбои, потолки, вопросы по папкам, нехватка токенов. Только владельцу. */
 async function loadInbox() {
   if (!S || !S.me.is_owner || inbox.loading) return;
   inbox.loading = true;
@@ -30,13 +31,20 @@ async function loadInbox() {
 }
 
 document.addEventListener("inbox-stale", () => loadInbox());
+document.addEventListener("question-answered", () => loadInbox());
 
-const WAIT_ICON = { stills: "eye", accept: "check-circle", failed: "alert-circle", fail_cap: "alert", final_cap: "alert", dead_end: "alert", script_stuck: "alert", folder: "folder", tokens: "mic" };
+const WAIT_ICON = { stills: "eye", accept: "check-circle", question: "info", failed: "alert-circle", fail_cap: "alert", final_cap: "alert", dead_end: "alert", script_stuck: "alert", folder: "folder", tokens: "mic" };
 const WAIT_BAD = ["failed", "fail_cap", "final_cap", "dead_end", "script_stuck"];
 const WAIT_BTN = { review: "Проверить", retry: "Повторить", again: "Ещё заход", folder: "Ответить", episode: "Открыть" };
 const WAIT_SHOWN = 5;
 
 function waitRow(it) {
+  // вопрос робота: отвечаем прямо здесь, никуда не переходя
+  if (it.action === "answer") {
+    return `<div class="wait-row wait-q" data-key="wait-${esc(it.id)}"><span class="wait-ic">${icon(WAIT_ICON.question)}</span>
+      <div class="grow"><div class="wait-label"><b>${esc(it.label || "")}</b>${it.at ? ` <span class="muted small">· ${esc(agoText(Date.now() - Date.parse(it.at)))}</span>` : ""}</div>
+        ${questionBlock({ id: it.question_id, text: it.text, why: it.why, options: it.options })}</div></div>`;
+  }
   const bad = WAIT_BAD.includes(it.kind);
   return `<div class="wait-row ${bad ? "bad" : ""}" data-key="wait-${esc(it.id)}">
     <span class="wait-ic">${icon(WAIT_ICON[it.kind] || "bolt")}</span>
