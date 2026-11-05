@@ -1,0 +1,126 @@
+/* Раскладка. Телефон — основа: нижняя панель. От 600 — узкое меню слева, от 1024 — боковое меню и панель выпуска. */
+.app { min-height: var(--vh); }
+.content { min-width: 0; }
+main {
+  max-width: 1440px; margin: 0 auto;
+  padding: var(--sp-3) var(--sp-3) calc(var(--bar-h) + var(--safe-bottom) + var(--native-h) + var(--sp-4));
+}
+
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: var(--sp-2);
+  height: calc(var(--bar-h) + var(--safe-top)); padding: var(--safe-top) var(--sp-3) 0;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+}
+/* Заголовок до двух строк: на 375 px рядом «Обновлено…» и кнопка, длинное имя («Настройки робота») не должно обрезаться */
+.topbar h1 { flex: 1; min-width: 0; font-size: var(--fs-lg); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.updated { flex: none; font-size: var(--fs-xs); color: var(--text-2); white-space: nowrap; }
+
+.side { display: none; }
+
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: var(--native-h); z-index: 6;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: var(--surface); border-top: 1px solid var(--line); padding-bottom: var(--safe-bottom);
+}
+.tabbar .nav-item {
+  min-width: 0; min-height: var(--bar-h); padding: var(--sp-1) 0; border: 0; background: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--text-2); font-size: var(--fs-xs); text-decoration: none;
+}
+.tabbar .nav-item .ic { width: 22px; height: 22px; }
+.tabbar .nav-item.on { color: var(--link); font-weight: 600; }
+.tabbar .nav-item.add .ic { box-sizing: content-box; width: 20px; height: 20px; padding: 2px 10px; border-radius: var(--radius); background: var(--accent); color: var(--accent-text); }
+
+/* Шторки */
+.layer { position: fixed; inset: 0; z-index: 20; }
+.scrim { position: absolute; inset: 0; background: var(--scrim); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: var(--native-h);
+  max-height: calc(var(--vh) - var(--safe-top) - var(--native-h) - var(--sp-5));
+  display: flex; flex-direction: column;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  background: var(--bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--sp-2) var(--sp-3) calc(var(--sp-5) + var(--safe-bottom));
+}
+.sheet:focus { outline: none; }
+.sheet-body { min-width: 0; }
+.grip { flex: none; width: 36px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 0 auto var(--sp-2); }
+.sheet-title { display: flex; align-items: center; gap: var(--sp-2); position: sticky; top: calc(var(--sp-2) * -1); z-index: 1; background: var(--bg); padding: var(--sp-1) 0 var(--sp-2); }
+.sheet-title b { flex: 1; min-width: 0; font-size: var(--fs-lg); font-weight: 600; overflow-wrap: anywhere; }
+
+/* Телефон: выпуск — весь экран */
+.layer.panel .sheet { top: var(--safe-top); max-height: none; border-radius: 0; }
+.layer.panel .grip { display: none; }
+
+/* Планшет: узкое меню, окна по центру */
+@media (min-width: 600px) {
+  .app { display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+  .tabbar { display: none; }
+  main { padding: var(--sp-4) var(--sp-4) calc(var(--sp-5) + var(--native-h)); }
+  .topbar { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+
+  .side {
+    display: flex; flex-direction: column; gap: var(--sp-2); align-items: stretch;
+    position: sticky; top: 0; height: var(--vh); padding: calc(var(--safe-top) + var(--sp-2)) var(--sp-2) var(--sp-3);
+    background: var(--surface); border-right: 1px solid var(--line); overflow-y: auto;
+  }
+  .brand { display: none; }
+  .side-add { width: 100%; padding: var(--sp-2) 0; flex-direction: column; gap: 2px; font-size: var(--fs-xs); min-height: 52px; }
+  .side-nav { display: flex; flex-direction: column; gap: 2px; }
+  .side .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: var(--sp-2) 0; min-height: 52px; justify-content: center; border-radius: var(--radius);
+    color: var(--text-2); font-size: var(--fs-xs); text-decoration: none;
+  }
+  .side .nav-item .ic { width: 20px; height: 20px; }
+  .side .nav-item:hover { background: var(--surface-2); }
+  .side .nav-item.on { background: var(--accent-bg); color: var(--link); font-weight: 600; }
+  .side-foot { display: none; }
+
+  .layer.form .sheet, .layer.panel .sheet {
+    left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%);
+    width: min(640px, calc(100vw - var(--sp-6))); max-height: calc(var(--vh) - var(--sp-6) - var(--native-h));
+    border-radius: var(--radius-lg); padding: var(--sp-3) var(--sp-4) var(--sp-4); box-shadow: var(--shadow);
+  }
+  .grip { display: none; }
+  .sheet-title { top: calc(var(--sp-3) * -1); }
+}
+
+/* Ноутбук: боковое меню с подписями, выпуск — панель справа от списка */
+@media (min-width: 1024px) {
+  .app { grid-template-columns: var(--side-w) minmax(0, 1fr); }
+  .side { padding: calc(var(--safe-top) + var(--sp-3)) var(--sp-3) var(--sp-3); gap: var(--sp-3); }
+  .brand { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); font-weight: 600; font-size: var(--fs-md); }
+  .brand .ic { color: var(--link); }
+  .side-add { flex-direction: row; gap: var(--sp-2); font-size: var(--fs-md); min-height: var(--tap); padding: var(--sp-2) var(--sp-3); }
+  .side .nav-item { flex-direction: row; gap: var(--sp-2); padding: var(--sp-2); min-height: var(--tap); justify-content: flex-start; font-size: var(--fs-md); }
+  .side .nav-item .ic { width: 18px; height: 18px; }
+  .side-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: auto; padding: var(--sp-2); color: var(--text-2); font-size: var(--fs-sm); }
+
+  main { padding: var(--sp-4) var(--sp-5) calc(var(--sp-5) + var(--native-h)); }
+  .topbar { padding-left: var(--sp-5); padding-right: var(--sp-5); }
+
+  .layer.panel { inset: 0 0 0 auto; width: var(--panel-w); }
+  .layer.panel .scrim { display: none; }
+  .layer.panel .sheet {
+    inset: 0; transform: none; width: auto; max-height: none;
+    border-radius: 0; border-left: 1px solid var(--line); box-shadow: none; padding: calc(var(--safe-top) + var(--sp-3)) var(--sp-4) var(--sp-4);
+  }
+  html.has-panel .content { margin-right: var(--panel-w); }
+}
+
+/* Панель выпуска закрывает страницу, пока она не встаёт сбоку: фон не прокручивается */
+@media (max-width: 1023px) {
+  html.has-panel { overflow: hidden; }
+}
+
+/* Нет данных и входа: только сообщение */
+html.bare .side, html.bare .topbar, html.bare .tabbar { display: none; }
+html.bare .app { display: block; }
+
+/* Макет нижних кнопок Telegram (?mock=1&native=1) */
+.fake-native { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: none; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--bg); border-top: 1px solid var(--line); }
+.fake-native .btn { flex: 1; min-height: 44px; }
+html.native-bar { --native-h: 61px; }
+html.native-bar .fake-native { display: flex; }

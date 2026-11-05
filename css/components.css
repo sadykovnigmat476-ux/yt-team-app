@@ -1,0 +1,144 @@
+/* Общие элементы: карточки, кнопки, поля, метки, тосты. Экранное — в css/views/. */
+
+h2 { display: flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); margin: var(--sp-4) 0 var(--sp-2); }
+h2:first-child { margin-top: 0; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--sp-3); margin-bottom: var(--sp-2); min-width: 0; }
+.card.clickable:hover, .next-row:hover, .kcard:hover { border-color: var(--line-strong); }
+.pc-stripe { border-left: 3px solid var(--pc, var(--accent)); }
+.empty { text-align: center; color: var(--text-2); padding: var(--sp-6) var(--sp-4); }
+.list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: var(--sp-2); align-items: start; }
+.list > .card { margin-bottom: 0; }
+.narrow { max-width: 760px; }
+.pdot { width: 9px; height: 9px; border-radius: 50%; background: var(--pc, var(--accent)); display: inline-block; flex: none; }
+
+/* Кнопки */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-1);
+  min-height: var(--tap); padding: var(--sp-1) var(--sp-3); border: 1px solid transparent; border-radius: var(--radius);
+  background: var(--accent); color: var(--accent-text); font-weight: 500; cursor: pointer; text-decoration: none;
+}
+.btn:hover { text-decoration: none; filter: brightness(1.07); }
+.btn.ghost { background: var(--surface); color: var(--text); border-color: var(--line-strong); }
+.btn.ghost:hover { background: var(--surface-2); filter: none; }
+.btn.danger { background: var(--danger-bg); color: var(--danger); }
+.btn.sm { font-size: var(--fs-sm); padding: var(--sp-1) var(--sp-2); }
+.btn.block { width: 100%; }
+.btn:disabled, .btn.is-busy, .icon-btn.is-busy { opacity: .55; pointer-events: none; }
+.icon-btn { display: inline-grid; place-items: center; min-width: var(--tap); min-height: var(--tap); border: 0; border-radius: var(--radius); background: none; color: var(--text-2); cursor: pointer; }
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.native-main .dup-main, .native-second .dup-second { display: none !important; }
+
+/* Чипы и метки */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 32px; padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface); font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; color: var(--text); text-decoration: none;
+}
+.chip:hover { text-decoration: none; background: var(--surface-2); }
+.chip.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.chip .ic { width: 15px; height: 15px; }
+.chips { display: flex; gap: var(--sp-1); overflow-x: auto; padding: 2px; margin: 0 -2px var(--sp-2); scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+.lang { min-width: 52px; justify-content: center; }
+.lang.done { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.lang.active { background: var(--accent-bg); color: var(--link); border-color: transparent; font-weight: 600; }
+.lang.blocked { color: var(--text-3); background: var(--surface-2); border-color: transparent; }
+.badge { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-xs); border-radius: var(--radius-sm); padding: 1px var(--sp-1); background: var(--surface-2); color: var(--text-2); white-space: nowrap; }
+.badge .ic { width: 13px; height: 13px; }
+.badge.late { background: var(--danger-bg); color: var(--danger); }
+.badge.today { background: var(--warn-bg); color: var(--warn); }
+.badge.ok { background: var(--ok-bg); color: var(--ok); }
+.seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--surface-2); border-radius: var(--radius); }
+.seg button { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 32px; border: 0; background: none; padding: 0 var(--sp-3); border-radius: var(--radius-sm); font-size: var(--fs-sm); cursor: pointer; color: var(--text-2); }
+.seg button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+.seg .ic { width: 15px; height: 15px; }
+.mini-ava { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; background: var(--accent-bg); color: var(--link); flex: none; }
+.ava { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-bg); color: var(--link); display: grid; place-items: center; font-weight: 700; flex: none; }
+
+/* Полоса этапов */
+.progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin: var(--sp-2) 0; }
+.progress i { height: 5px; border-radius: 3px; background: var(--line); position: relative; overflow: hidden; }
+.progress i b { position: absolute; inset: 0 auto 0 0; background: var(--ok-fill); }
+.progress i.active { background: color-mix(in srgb, var(--accent) 32%, var(--surface)); }
+.progress i.late { background: color-mix(in srgb, var(--danger-fill) 40%, var(--surface)); }
+.stage-labels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; font-size: 11px; color: var(--text-2); }
+
+/* Поля */
+label.f { display: block; margin-bottom: var(--sp-3); min-width: 0; }
+label.f > span { display: block; font-size: var(--fs-xs); color: var(--text-2); margin-bottom: var(--sp-1); }
+.hint { display: block; color: var(--text-2); margin-top: var(--sp-1); }
+.inp { width: 100%; min-height: var(--tap); border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--radius); padding: var(--sp-1) var(--sp-2); }
+.inp:focus { border-color: var(--accent); outline: 1px solid var(--accent); outline-offset: 0; }
+textarea.inp { resize: vertical; min-height: 72px; padding: var(--sp-2); display: block; }
+.w-icon { width: 76px; flex: none; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: var(--sp-2); margin-top: var(--sp-1); }
+.swatches { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.swatch { width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer; background: var(--pc); }
+.swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--pc); }
+.check-note { display: flex; gap: var(--sp-2); align-items: flex-start; }
+.lang-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) var(--tap); gap: var(--sp-1); margin-bottom: var(--sp-1); align-items: center; }
+
+/* Блоки текста */
+.note { border-radius: var(--radius); padding: var(--sp-2); margin: var(--sp-2) 0; font-size: var(--fs-sm); background: var(--accent-bg); }
+.note.warn { background: var(--warn-bg); }
+.banner { display: flex; align-items: center; gap: var(--sp-2); background: var(--danger-bg); color: var(--danger); border-radius: var(--radius); padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-3); font-size: var(--fs-sm); }
+.warn-line { display: flex; gap: var(--sp-2); align-items: flex-start; }
+
+/* Строки в карточке */
+.member { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; border-top: 1px solid var(--line); min-width: 0; }
+.member:first-child { border-top: 0; padding-top: 0; }
+.link-row { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) 0; border-top: 1px solid var(--line); }
+.link-row:first-child { border-top: 0; }
+.line-row { align-items: flex-start; padding: var(--sp-1) 0; border-top: 1px solid var(--line); }
+.line-row:first-child { border-top: 0; }
+
+/* Таблица */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.table th { text-align: left; font-weight: 600; color: var(--text-2); }
+.table th, .table td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line); vertical-align: top; }
+.table tr:last-child td { border-bottom: 0; }
+.table .num { text-align: right; }
+
+/* Скелетоны: без мигания — спокойная подложка */
+.sk { display: block; background: var(--surface-2); border-radius: var(--radius-sm); }
+.sk-line { height: 12px; margin: var(--sp-2) 0; }
+.sk-card .sk-line:first-child { margin-top: 0; }
+.sk-card .sk-line:last-child { margin-bottom: 0; }
+.sk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: var(--sp-2); }
+
+/* Тост и ошибка */
+.toast {
+  position: fixed; left: var(--sp-3); right: var(--sp-3); margin: 0 auto; width: fit-content; max-width: min(560px, calc(100vw - var(--sp-5)));
+  bottom: calc(var(--bar-h) + var(--safe-bottom) + var(--native-h) + var(--sp-3)); z-index: 50; display: none;
+  align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--radius);
+  background: #1c1f26; color: #fff; font-size: var(--fs-sm); box-shadow: var(--shadow);
+}
+.toast.show { display: flex; }
+.toast.alert { background: #8f1d1d; bottom: calc(var(--bar-h) + var(--safe-bottom) + var(--native-h) + 64px); }
+.toast-btn { flex: none; min-height: 32px; border: 0; background: rgba(255, 255, 255, .18); color: #fff; font-weight: 600; border-radius: var(--radius-sm); padding: var(--sp-1) var(--sp-2); cursor: pointer; white-space: nowrap; }
+.toast-btn.ghost { background: none; font-weight: 400; }
+@media (min-width: 600px) {
+  .toast { bottom: calc(var(--sp-4) + var(--native-h)); }
+  .toast.alert { bottom: calc(var(--sp-6) + var(--sp-5) + var(--native-h)); }
+}
+
+/* Вопрос-подтверждение */
+.confirm { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: var(--sp-4); background: var(--scrim); }
+.confirm-box { width: min(400px, 100%); background: var(--surface); border-radius: var(--radius-lg); padding: var(--sp-4); box-shadow: var(--shadow); }
+.confirm-box p { margin-bottom: var(--sp-4); }
+.confirm-acts { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+
+/* Меню «Ещё» на телефоне */
+.more-list { display: grid; gap: 2px; }
+.more-list .nav-item { display: flex; align-items: center; gap: var(--sp-3); min-height: 48px; padding: 0 var(--sp-3); border-radius: var(--radius); background: var(--surface); color: var(--text); text-decoration: none; }
+
+/* Палец: всё нажимаемое не меньше 44 px; поля от 16 px, иначе iOS приближает страницу при вводе */
+@media (pointer: coarse) {
+  .chip, .seg button, .toast-btn, h2.clickable, .onb-head { min-height: 44px; }
+  .chips, .seg { row-gap: var(--sp-1); }
+  .inp, select, input[type=date] { font-size: var(--fs-lg); }
+  .swatch { width: 44px; height: 44px; }
+}

@@ -1,0 +1,119 @@
+/* Токены «Рабочей панели»: цвет, шрифт, отступы. Всё остальное в css строится только из них.
+   Своя палитра работает в браузере; внутри Telegram core/tg.js подставляет его цвета, доведённые до AA.
+   Тона ok/warn/danger — цвет текста, проходящий AA и на --surface, и на своей подложке *-bg. */
+:root {
+  color-scheme: light;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --side-w: 220px;
+  --rail-w: 76px;
+  --panel-w: min(520px, 42vw);
+  --bar-h: 56px;
+  --tap: 36px; /* высота кнопки; при pointer: coarse — 44 */
+
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eef0f3;
+  --line: #e2e4e9;
+  --line-strong: #c9cdd4;
+  --text: #16181d;
+  --text-2: #50565f;
+  --text-3: #636973;
+  --accent: #2563eb;
+  --accent-text: #ffffff;
+  --link: #1d5bd8;
+  --ok: #17693a;
+  --ok-fill: #2f9e5e;
+  --warn: #7a5200;
+  --warn-fill: #d99a00;
+  --danger: #b42323;
+  --danger-fill: #d64545;
+  --shadow: 0 8px 28px rgba(16, 24, 40, .16);
+  --scrim: rgba(16, 20, 28, .44);
+
+  --accent-bg: color-mix(in srgb, var(--accent) 11%, var(--surface));
+  --ok-bg: color-mix(in srgb, var(--ok-fill) 14%, var(--surface));
+  --warn-bg: color-mix(in srgb, var(--warn-fill) 18%, var(--surface));
+  --danger-bg: color-mix(in srgb, var(--danger-fill) 12%, var(--surface));
+
+  /* вырезы и «чёлки»: системные (iOS) и от Telegram (полноэкранный режим на телефонах) */
+  --safe-top: calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
+  /* высота окна: Telegram отдаёт её сам (на Android меняется, когда открыта клавиатура) */
+  --vh: var(--tg-viewport-height, 100dvh);
+  --native-h: 0px; /* высота макета нижних кнопок Telegram на моке */
+}
+
+:root[data-scheme="dark"] {
+  color-scheme: dark;
+  --bg: #111317;
+  --surface: #1a1d23;
+  --surface-2: #24282f;
+  --line: #2c3038;
+  --line-strong: #434953;
+  --text: #eceef1;
+  --text-2: #b1b6bf;
+  --text-3: #9ca2ac;
+  --accent: #2563eb;
+  --accent-text: #ffffff;
+  --link: #8ab4ff;
+  --ok: #6fd69a;
+  --ok-fill: #3fb574;
+  --warn: #f0c36a;
+  --warn-fill: #d99a00;
+  --danger: #ff9c9c;
+  --danger-fill: #e05c5c;
+  --shadow: 0 8px 28px rgba(0, 0, 0, .5);
+  --scrim: rgba(0, 0, 0, .56);
+  --accent-bg: color-mix(in srgb, #4d8bff 20%, var(--surface));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.tg):not([data-scheme="light"]) {
+    color-scheme: dark;
+    --bg: #111317;
+    --surface: #1a1d23;
+    --surface-2: #24282f;
+    --line: #2c3038;
+    --line-strong: #434953;
+    --text: #eceef1;
+    --text-2: #b1b6bf;
+    --text-3: #9ca2ac;
+    --accent: #2563eb;
+    --accent-text: #ffffff;
+    --link: #8ab4ff;
+    --ok: #6fd69a;
+    --ok-fill: #3fb574;
+    --warn: #f0c36a;
+    --warn-fill: #d99a00;
+    --danger: #ff9c9c;
+    --danger-fill: #e05c5c;
+    --shadow: 0 8px 28px rgba(0, 0, 0, .5);
+    --scrim: rgba(0, 0, 0, .56);
+    --accent-bg: color-mix(in srgb, #4d8bff 20%, var(--surface));
+  }
+}
+
+/* Палец: цели нажатия от 44 px */
+@media (pointer: coarse) {
+  :root { --tap: 44px; }
+}
