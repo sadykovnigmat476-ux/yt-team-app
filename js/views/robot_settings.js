@@ -5,7 +5,7 @@ import { render, ui } from "../core/store.js?v=e0f3245a";
 import { icon } from "../ui/icons.js?v=2008de79";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { loadRobot } from "./robot.js?v=0614360b";
+import { loadRobot } from "./robot.js?v=8a44053b";
 
 /** Зеркало пределов domain.ts (LIMIT_RULES): здесь — быстрая проверка до отправки, последнее слово за сервером. */
 const FIELDS = [
@@ -14,7 +14,7 @@ const FIELDS = [
     { k: "night_to", name: "Конец ночи", unit: "час", min: 0, max: 23, help: "До какого часа. Начало и конец не должны совпадать." },
   ] },
   { group: "Повторы и потолки", hint: "Потолки защищают подписку: упёрся — робот ждёт тебя.", items: [
-    { k: "retry_hours", name: "Повтор после сбоя", unit: "часов", min: 1, max: 72, help: "Через сколько часов робот сам повторит упавшую фазу." },
+    { k: "retry_hours", name: "Повтор после сбоя", unit: "часов", min: 1, max: 72, help: "Через сколько часов робот сам повторит упавшую фазу. Сценарий и монтаж — не дольше часа, иначе кончится ночь; временный сбой Claude — через 15 минут." },
     { k: "max_fails", name: "Сбоев подряд", unit: "раз", min: 1, max: 10, help: "Сколько раз подряд фаза может упасть, потом робот встанет и напишет тебе." },
     { k: "final_max", name: "Заходов финала", unit: "заходов", min: 1, max: 48, help: "Сколько заходов финала до кнопки «Ещё N заходов»." },
     { k: "script_max", name: "Заходов сценария", unit: "заходов", min: 1, max: 10, help: "Сколько частей на сценарий." },

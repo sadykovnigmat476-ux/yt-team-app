@@ -17,7 +17,7 @@ const RUN_STALE_MIN = 15; // зеркало RUN_STALE_MS: дольше без п
 const PHASE_RU = { script: "сценарий", voice: "озвучка", montage: "монтаж", changes: "правки", final: "финал", accept: "приёмка" };
 const RUN_RU = { running: "идёт", review: "ждёт тебя", done: "готово", failed: "упала", stopped: "остановлена" };
 const FAIL_RU = {
-  failed: "сбой", timeout: "вышло время", no_checkpoint: "не отправил кадры на проверку", auth: "нет входа в Claude", limit: "кончился лимит Claude",
+  failed: "сбой", transient: "временный сбой Claude", timeout: "вышло время", no_checkpoint: "не отправил кадры на проверку", auth: "нет входа в Claude", limit: "кончился лимит Claude",
   no_claude: "на ПК не найден claude", stopped: "остановили", not_delivered: "не сдано", check_failed: "проверка не прошла", lost: "прогонка потерялась",
 };
 const ROLLBACK_PHASES = [["script", "Сценарий"], ["voice", "Озвучка"], ["montage", "Монтаж"], ["final", "Финал"]];
