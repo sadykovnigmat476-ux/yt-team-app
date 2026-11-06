@@ -10,7 +10,7 @@ import { questionBlock } from "../ui/question.js?v=38a2446a";
 import { toast } from "../ui/toast.js?v=c026fd86";
 import { openEpisode } from "./episode.js?v=81e37edf";
 import { loadFolders, openFolderQuestion } from "./episodes.js?v=04921aa5";
-import { noEmoji } from "./robot.js?v=54c49aac";
+import { noEmoji } from "./robot.js?v=61008b95";
 
 // ---------- «Ждёт тебя»: решения владельца в одном списке ----------
 const inbox = { data: null, error: null, loading: false, all: false };
@@ -66,7 +66,9 @@ function waitingBlock() {
   const shown = inbox.all ? items : items.slice(0, WAIT_SHOWN);
   const more = items.length > WAIT_SHOWN
     ? `<button class="btn ghost sm block mt-2" data-act="wait-all">${inbox.all ? "Свернуть" : `Показать все ${items.length}`}</button>` : "";
-  return `<div class="card wait" data-key="wait-card"><h2>${icon("flame")}Ждёт тебя · ${items.length}</h2>${shown.map(waitRow).join("")}${more}</div>`;
+  const queue = inbox.data.queue || [];
+  const start = queue.length > 1 ? `<button class="btn block mb-2" data-key="wait-queue" data-act="wait-queue">${icon("play")}Разобрать по очереди · ${queue.length}</button>` : "";
+  return `<div class="card wait" data-key="wait-card"><h2>${icon("flame")}Ждёт тебя · ${items.length}</h2>${start}${shown.map(waitRow).join("")}${more}</div>`;
 }
 
 // ---------- главная задача и список ----------
@@ -177,6 +179,7 @@ export const refresh = loadInbox;
 export const actions = {
   "wait-retry": () => { inbox.error = null; loadInbox(); },
   "wait-all": () => { inbox.all = !inbox.all; render(); },
+  "wait-queue": () => { const q = inbox.data && inbox.data.queue; if (q && q.length) go({ tab: "review", run: q[0] }); },
   "wait-go": async (el) => {
     const it = inbox.data && inbox.data.items.find((x) => x.id === el.dataset.id);
     if (!it) return;

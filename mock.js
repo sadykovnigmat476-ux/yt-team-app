@@ -541,7 +541,8 @@
     }
     for (const q of questions) items.push({ ...blank, id: "folder:" + q.id, kind: "folder", action: "folder", label: q.folder_name, text: "Папка на Диске: к какому выпуску?", question_id: q.id, at: q.created_at });
     items.push({ ...blank, id: "tokens:6", kind: "tokens", action: "episode", label: "🔭 Скрытая Физика · S06 «Почему небо синее»", text: "ждёт токенов Lumean: нужно 5200, осталось 340, подписка обновится 12.11", episode_id: 6 });
-    return { items, count: items.length };
+    const queue = items.filter((i) => i.action === "review" && i.run_id != null).map((i) => i.run_id);
+    return { items, count: items.length, queue };
   }
 
   // файлы выпуска: у первого выпуска пакет собран почти целиком, DE без видео, PL без обложки

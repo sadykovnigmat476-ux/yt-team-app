@@ -196,7 +196,7 @@ function robotEpisode(e, nowMs, withActs, d) {
   return `<div class="card pc-stripe rb-ep" data-key="rb-ep-${e.id}" style="${pc(p)}">
     <div class="row top"><div class="grow title break">${esc(e.label)}</div></div>
     ${badges ? `<div class="rb-badges">${badges}</div>` : ""}
-    ${whereLine(e)}${miss}${e.question ? questionBlock(e.question) : ""}
+    ${whereLine(e)}${e.fixing ? `<div class="rb-where wait">${icon(WHERE_ICON.wait)}<span>${esc(e.fixing)}</span></div>` : ""}${miss}${e.question ? questionBlock(e.question) : ""}
     <div class="rb-steps">${(e.track || []).map(robotStep).join("")}</div>
     ${e.run ? robotRun(e.run, nowMs, d) : ""}
     <div class="rb-spend muted small">${icon("chart")}${esc(usageLine(e.usage))}</div>${acts}

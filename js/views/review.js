@@ -10,7 +10,7 @@ import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Состояние экрана: run — какую прогонку показываем; langs — языки на возврат; zoom — открытый кадр. */
-const rv = { run: null, data: null, error: null, loading: false, note: "", langs: new Set(), langsTouched: false, tab: null, zoom: null, allOk: false, noteError: null };
+const rv = { run: null, data: null, error: null, loading: false, note: "", langs: new Set(), langsTouched: false, tab: null, zoom: null, allOk: false, noteError: null, queue: [] };
 let seq = 0;
 const zoomSets = new Map();
 
@@ -41,12 +41,30 @@ async function load() {
   }
 }
 
+/** Очередь решений (ближайший выход первым) считает сервер; сбой не мешает проверке, просто нет «Следующего». */
+async function loadQueue() {
+  try {
+    const r = await api("robot.inbox");
+    rv.queue = (r && r.queue) || [];
+    if (currentRoute().tab === "review") render();
+  } catch (e) {
+    console.warn("очередь решений", e.message);
+  }
+}
+
+/** Следующее решение после текущего; круг замыкается, чтобы отложенное не потерялось. */
+function nextRun() {
+  const others = rv.queue.filter((id) => id !== rv.run);
+  if (!others.length) return null;
+  return rv.queue[(rv.queue.indexOf(rv.run) + 1) % rv.queue.length] ?? others[0];
+}
+
 function reset() {
   Object.assign(rv, { run: currentRoute().run, data: null, error: null, note: "", langs: new Set(), langsTouched: false, tab: null, zoom: null, allOk: false, noteError: null });
   zoomSets.clear();
 }
 
-export function enter() { reset(); if (rv.run != null) load(); }
+export function enter() { reset(); if (rv.run != null) load(); loadQueue(); }
 export function refresh() { if (rv.run != null && !rv.loading) return load(); }
 
 // ---------- кадры ----------
@@ -194,7 +212,9 @@ export function view() {
   }
   const d = rv.data, accept = d.kind === "accept";
   let html = rv.error ? `<div class="banner"><span class="grow">Не обновилось · ${esc(rv.error)}</span>${retry}</div>` : "";
-  html += `<div class="rv-head"><div class="grow"><div class="kicker">${accept ? "Приёмка выпуска" : "Проверка стоп-кадров"}</div><h2 class="rv-title">${esc(d.label)}</h2></div>
+  const more = rv.queue.filter((id) => id !== rv.run).length;
+  html += `<div class="rv-head"><div class="grow"><div class="kicker">${accept ? "Приёмка выпуска" : "Проверка стоп-кадров"}${more ? ` · ещё ${more} в очереди` : ""}</div><h2 class="rv-title">${esc(d.label)}</h2></div>
+    ${more ? `<button class="btn sm ghost" data-key="rv-skip" data-act="rv-skip">Следующий</button>` : ""}
     <button class="icon-btn ${rv.loading ? "is-busy" : ""}" data-act="rv-reload" aria-label="Обновить" title="Обновить">${icon("refresh")}</button></div>`;
   html += summary(d) + decision(d);
   if (accept && d.report) {
@@ -272,12 +292,15 @@ async function decide(verdict, el) {
   if (!r) return;
   ui.robot.fresh = false;
   document.dispatchEvent(new Event("inbox-stale"));
-  go({ tab: "robot" });
+  await loadQueue();
+  const next = nextRun();
+  go(next != null ? { tab: "review", run: next } : { tab: "now" });
 }
 
 export const actions = {
   "rv-reload": () => load(),
   "rv-back": () => go({ tab: "robot" }),
+  "rv-skip": () => { const next = nextRun(); if (next != null) go({ tab: "review", run: next }); },
   "rv-tab": (el) => { rv.tab = el.dataset.lang; render(); },
   "rv-allok": () => { rv.allOk = !rv.allOk; render(); },
   "rv-lang": (el) => {

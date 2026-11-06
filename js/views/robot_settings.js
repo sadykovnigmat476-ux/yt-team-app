@@ -5,7 +5,7 @@ import { render, ui } from "../core/store.js?v=e0f3245a";
 import { icon } from "../ui/icons.js?v=2008de79";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { loadRobot } from "./robot.js?v=54c49aac";
+import { loadRobot } from "./robot.js?v=61008b95";
 
 /** Зеркало пределов domain.ts (LIMIT_RULES): здесь — быстрая проверка до отправки, последнее слово за сервером. */
 const FIELDS = [
