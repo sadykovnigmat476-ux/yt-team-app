@@ -330,9 +330,9 @@ export function view() {
   else html += `<div class="rb-list">${eps.map((e) => robotEpisode(e, nowMs, true, d)).join("")}</div>`;
 
   if (doneEps.length) {
-    html += `<div class="chips mt-2"><button class="chip ${r.showDone ? "on" : ""}" data-act="robot-done">${icon(r.showDone ? "chevron-down" : "chevron-right")}Сданы за неделю · ${doneEps.length}</button></div>`;
-    if (r.showDone) html += `<div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false, d)).join("")}</div>`;
-  } else if (enabled.length) html += `<div class="muted small note-line">Сданных за неделю пока нет.</div>`;
+    html += `<div class="chips mt-2"><button class="chip ${r.showDone ? "on" : ""}" data-act="robot-done">${icon(r.showDone ? "chevron-down" : "chevron-right")}Готовые · ${doneEps.length}</button></div>`;
+    if (r.showDone) html += `<div class="muted small note-line">Выложены на всех языках, за неделю. Старые — на вкладке «Выпуски», раздел «Готовые».</div><div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false, d)).join("")}</div>`;
+  } else if (enabled.length) html += `<div class="muted small note-line">Готовых за неделю пока нет.</div>`;
   html += `</div><aside class="rb-aside">`;
 
   html += `<h2>Расход</h2>${usageTiles(d)}`;
