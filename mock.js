@@ -355,14 +355,14 @@
   // как memberChangeRefusal на сервере: владелец в моке — tg_id 1
   const ownerGuard = (id, removesAdmin) => { if (removesAdmin && !noOwner && id === 1 && st.me.tg_id !== 1) throw new Error("Снять админа и удалить владельца может только сам владелец"); };
   const missingOf = (note) => { const l = String(note || "").split("\n")[0]; return l.startsWith("Не сдано: ") ? l.slice(10).split(", ").filter(Boolean) : []; };
-  rb.limits = { night_from: 1, night_to: 8, retry_hours: 6, max_fails: 3, final_max: 12, script_max: 3, montage_parts_max: 8, accept_autofix: 2, busy_min: 30, horizon_days: 14 };
+  rb.limits = { night_from: 1, night_to: 8, retry_hours: 6, max_fails: 3, final_max: 24, script_max: 3, montage_parts_max: 8, accept_autofix: 2, busy_min: 30, horizon_days: 14 };
   const LIMIT_RULES = {
     night_from: [0, 23, "Начало ночи"], night_to: [0, 23, "Конец ночи"], retry_hours: [1, 72, "Повтор после сбоя, ч"], max_fails: [1, 10, "Сбоев подряд"], final_max: [1, 48, "Заходов финала"],
     script_max: [1, 10, "Заходов сценария"], montage_parts_max: [1, 30, "Частей монтажа"], accept_autofix: [0, 5, "Автоисправлений приёмки"], busy_min: [0, 240, "«Папка занята», мин"], horizon_days: [1, 90, "Горизонт, дней"],
   };
   function checkLimits(v) {
     if (!v || typeof v !== "object") throw new Error("Настройки робота: нужен набор значений");
-    const out = { night_from: 1, night_to: 8, retry_hours: 6, max_fails: 3, final_max: 12, script_max: 3, montage_parts_max: 8, accept_autofix: 2, busy_min: 30, horizon_days: 14 };
+    const out = { night_from: 1, night_to: 8, retry_hours: 6, max_fails: 3, final_max: 24, script_max: 3, montage_parts_max: 8, accept_autofix: 2, busy_min: 30, horizon_days: 14 };
     for (const [k, [min, max, name]] of Object.entries(LIMIT_RULES)) {
       if (v[k] === undefined || v[k] === null) continue;
       if (!Number.isInteger(v[k]) || v[k] < min || v[k] > max) throw new Error(name + ": целое число от " + min + " до " + max);

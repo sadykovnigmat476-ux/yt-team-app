@@ -21,7 +21,7 @@ const FAIL_RU = {
   no_claude: "на ПК не найден claude", stopped: "остановили", not_delivered: "не сдано", check_failed: "проверка не прошла", lost: "прогонка потерялась",
 };
 const ROLLBACK_PHASES = [["script", "Сценарий"], ["voice", "Озвучка"], ["montage", "Монтаж"], ["final", "Финал"]];
-const NIGHT_PHASES = ["script", "montage"];
+const NIGHT_PHASES = ["script"]; // зеркало domain.ts: монтаж круглосуточный с 08.11.2026
 const WATCHED = ["robot", "robot_settings"];
 const watching = () => WATCHED.includes(currentRoute().tab) && S && S.me.is_owner;
 const onRobot = () => currentRoute().tab === "robot" && S && S.me.is_owner;
@@ -179,7 +179,7 @@ function robotEpisode(e, nowMs, withActs, d) {
       if (allowed) b.push(`<button class="btn sm ghost" data-key="rb-night-${e.id}" data-act="robot-ep" data-op="night" data-id="${e.id}">${icon("moon")}Только ночью</button>`);
       // только когда ночная фаза уже ждёт, робот не на паузе и выпуск не у человека и не упал
       else if (e.next && NIGHT_PHASES.includes(e.next.phase) && !running && !d.night && !d.paused && !e.hold && !retry) {
-        b.push(`<button class="btn sm ghost" data-key="rb-now-${e.id}" data-act="robot-ep" data-op="now" data-id="${e.id}" title="Сценарий и монтаж идут ночью; кнопка разрешает их днём на 12 часов">${icon("sun")}Запустить сейчас</button>`);
+        b.push(`<button class="btn sm ghost" data-key="rb-now-${e.id}" data-act="robot-ep" data-op="now" data-id="${e.id}" title="Сценарий идёт ночью; кнопка разрешает его днём на 12 часов">${icon("sun")}Запустить сейчас</button>`);
       }
       b.push(`<button class="btn sm ghost" data-key="rb-mine-${e.id}" data-act="rb-manual" data-id="${e.id}" data-manual="1" data-running="${running ? 1 : 0}">${icon("user")}Веду сам</button>`);
     } else {
@@ -317,7 +317,7 @@ export function view() {
       <div>Модель: <b class="rb-level">Opus 5.5 · ${esc(effortText(d.effort_label))}</b></div>
       <div>Владелец: ${d.owner ? esc(d.owner.name) : "не назначен"}</div>
       <div>${pcSeen}</div>
-      <div>${d.night ? "Сейчас ночь" : "Сейчас день"} · ночное окно ${esc(d.night_window)}: сценарий и монтаж идут только в нём</div>
+      <div>${d.night ? "Сейчас ночь" : "Сейчас день"} · ночное окно ${esc(d.night_window)}: сценарий идёт только в нём, монтаж — в любое время</div>
       <div>Обновлено в ${esc(clock)} · дальше само раз в ${ROBOT_POLL_MS / 1000} с</div></div>
     <button class="btn block ${d.paused ? "" : "danger"}" data-act="robot-pause" data-paused="${d.paused ? 0 : 1}">${icon(d.paused ? "play" : "pause")}${d.paused ? "Запустить робота" : "Остановить робота"}</button>
     <div class="muted small rb-srv-note">${SRV_STOP_NOTE}</div>
