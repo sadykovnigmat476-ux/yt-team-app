@@ -10,7 +10,7 @@ import { questionBlock } from "../ui/question.js?v=38a2446a";
 import { toast } from "../ui/toast.js?v=c026fd86";
 import { openEpisode } from "./episode.js?v=81e37edf";
 import { loadFolders, openFolderQuestion } from "./episodes.js?v=04921aa5";
-import { noEmoji } from "./robot.js?v=d3024f5b";
+import { noEmoji } from "./robot.js?v=c72595ef";
 
 // ---------- «Ждёт тебя»: решения владельца в одном списке ----------
 const inbox = { data: null, error: null, loading: false, all: false };

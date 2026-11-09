@@ -331,7 +331,7 @@ export function view() {
 
   if (doneEps.length) {
     html += `<div class="chips mt-2"><button class="chip ${r.showDone ? "on" : ""}" data-act="robot-done">${icon(r.showDone ? "chevron-down" : "chevron-right")}Готовые · ${doneEps.length}</button></div>`;
-    if (r.showDone) html += `<div class="muted small note-line">Выложены на всех языках, за неделю. Старые — на вкладке «Выпуски», раздел «Готовые».</div><div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false, d)).join("")}</div>`;
+    if (r.showDone) html += `<div class="muted small note-line">Уже на YouTube (хотя бы на одном языке), за неделю. Старые — на вкладке «Выпуски», раздел «Готовые».</div><div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false, d)).join("")}</div>`;
   } else if (enabled.length) html += `<div class="muted small note-line">Готовых за неделю пока нет.</div>`;
   html += `</div><aside class="rb-aside">`;
 
