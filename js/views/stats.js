@@ -2,9 +2,9 @@
 import { esc, fmt, fmtNum, langTag, META, signed } from "../core/logic.js?v=27fff957";
 import { currentRoute } from "../core/router.js?v=27d33f38";
 import { api } from "../core/api.js?v=f1e8780b";
-import { chan, proj, render, S, store, ui } from "../core/store.js?v=e0f3245a";
+import { chan, proj, render, S, store, ui } from "../core/store.js?v=fd36140d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, fullscreenChip, projectChips } from "../ui/parts.js?v=2e46b762";
+import { emptyBlock, fullscreenChip, projectChips } from "../ui/parts.js?v=91b94c25";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { table } from "../ui/table.js?v=46836274";
 

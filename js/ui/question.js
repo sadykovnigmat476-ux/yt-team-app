@@ -1,6 +1,6 @@
 // Вопрос робота владельцу: блок с вариантами и своим ответом. Один на «Ждёт тебя», пульт и карточку выпуска.
 import { answerBody, esc } from "../core/logic.js?v=27fff957";
-import { act } from "../core/store.js?v=e0f3245a";
+import { act } from "../core/store.js?v=fd36140d";
 import { toast } from "./toast.js?v=c026fd86";
 
 /** q — { id, text, why, options }. Поле своего ответа переживает перерисовку: morph не трогает набранное. */

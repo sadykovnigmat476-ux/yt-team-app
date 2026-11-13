@@ -1,9 +1,9 @@
 // Настройка робота по проектам (владелец): зелёное и красное из отчёта ytbot doctor, у красного — что сделать.
 import { api } from "../core/api.js?v=f1e8780b";
 import { agoText, esc } from "../core/logic.js?v=27fff957";
-import { pc, render, S } from "../core/store.js?v=e0f3245a";
+import { pc, render, S } from "../core/store.js?v=fd36140d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock } from "../ui/parts.js?v=2e46b762";
+import { emptyBlock } from "../ui/parts.js?v=91b94c25";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 

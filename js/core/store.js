@@ -17,7 +17,7 @@ export const ui = {
   project: store("project") || "all", showDone: false, month: null, day: null,
   sheet: null, // верхняя шторка, ведёт ui/sheet.js
   statsDays: Number(store("statsDays")) || 30, stats: null, statsLoading: null, statsError: null,
-  epView: store("epView") || "board", showWaiting: true, hero: null,
+  epView: store("epView") || "board", epDense: store("epDense") !== "0", showWaiting: true, hero: null,
   nowAll: false, newEp: null, skipKeep: null, draft: null, driveFolders: null,
   at: 0, loading: false, loadError: null, // когда обновлено, идёт ли обновление, ошибка обновления
   // пульс робота: data — ответ robot.state, at — когда пришёл, fresh — свежее ли для открытого захода во вкладку

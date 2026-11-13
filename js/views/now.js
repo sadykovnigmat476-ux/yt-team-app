@@ -2,15 +2,15 @@
 import { api } from "../core/api.js?v=f1e8780b";
 import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV, stageDay } from "../core/logic.js?v=27fff957";
 import { currentRoute, go } from "../core/router.js?v=27d33f38";
-import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=e0f3245a";
+import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=fd36140d";
 import { openUrl } from "../core/tg.js?v=f1d7ce1d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=2e46b762";
-import { questionBlock } from "../ui/question.js?v=38a2446a";
+import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=91b94c25";
+import { questionBlock } from "../ui/question.js?v=622acfdf";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { openEpisode } from "./episode.js?v=81e37edf";
-import { loadFolders, openFolderQuestion } from "./episodes.js?v=04921aa5";
-import { noEmoji } from "./robot.js?v=c72595ef";
+import { openEpisode } from "./episode.js?v=80a4c520";
+import { loadFolders, openFolderQuestion } from "./episodes.js?v=f75dda96";
+import { noEmoji } from "./robot.js?v=1bf5e6af";
 
 // ---------- «Ждёт тебя»: решения владельца в одном списке ----------
 const inbox = { data: null, error: null, loading: false, all: false };

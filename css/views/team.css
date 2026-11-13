@@ -39,14 +39,26 @@
 .filters .count { margin-left: auto; }
 .board { display: flex; gap: var(--sp-2); overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 calc(var(--sp-3) * -1); padding: 2px var(--sp-3) var(--sp-3); scrollbar-width: none; }
 .board::-webkit-scrollbar { display: none; }
-.col { flex: 0 0 min(78vw, 300px); scroll-snap-align: center; background: var(--surface-2); border-radius: var(--radius); padding: var(--sp-2); min-height: 140px; min-width: 0; }
-.col-h { display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-1) var(--sp-2); font-weight: 600; font-size: var(--fs-sm); }
+/* Колонка не выше экрана: карточки листаются внутри, заголовок с числом остаётся сверху */
+.col {
+  flex: 0 0 min(78vw, 300px); scroll-snap-align: center; background: var(--surface-2); border-radius: var(--radius); padding: var(--sp-2); min-height: 140px; min-width: 0;
+  display: flex; flex-direction: column;
+  max-height: calc(var(--vh) - var(--bar-h) * 2 - var(--safe-top) - var(--safe-bottom) - var(--native-h) - var(--sp-5));
+}
+.col-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; margin: 0 calc(var(--sp-1) * -1); padding: 0 var(--sp-1); }
+.col-h { flex: none; display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-1) var(--sp-2); font-weight: 600; font-size: var(--fs-sm); }
 .col-h .n { margin-left: auto; font-size: var(--fs-xs); color: var(--text-2); background: var(--surface); border-radius: 999px; padding: 0 var(--sp-2); font-weight: 600; }
 .col-h .n.late { color: var(--danger); background: var(--danger-bg); }
 .kcard { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--pc, var(--accent)); border-radius: var(--radius); padding: var(--sp-2); margin-bottom: var(--sp-1); cursor: pointer; }
 .kcard .tt { font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
 .kcard .mt { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-2); font-size: var(--fs-xs); color: var(--text-2); min-height: 20px; }
 .kcard .mt .ic { width: 14px; height: 14px; }
+.kcard.dense { padding: var(--sp-1) var(--sp-2); }
+.kcard.dense .kh { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; }
+.kcard.dense .kh > .ellipsis { flex: 1 1 auto; min-width: 0; }
+.kcard.dense .mt { flex: none; margin-top: 0; min-height: 0; }
+.kcard.dense .mt .badge { padding-top: 0; padding-bottom: 0; }
+.kcard.dense .tt { -webkit-line-clamp: 1; font-size: var(--fs-sm); margin-top: 0; }
 .col-empty { color: var(--text-2); font-size: var(--fs-sm); text-align: center; padding: var(--sp-4) var(--sp-1); }
 
 /* Выпуск */
@@ -96,7 +108,7 @@
 
 @media (min-width: 600px) {
   .board { margin: 0; padding: 2px 0 var(--sp-3); scroll-snap-type: x proximity; scrollbar-width: thin; }
-  .col { flex: 1 0 200px; }
+  .col { flex: 1 0 200px; max-height: calc(var(--vh) - var(--bar-h) - var(--safe-top) - var(--native-h) - var(--sp-5)); }
   .day { min-height: 74px; }
   .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ep-tools .chips { flex: 1 1 100%; }

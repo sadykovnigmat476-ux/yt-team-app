@@ -3,7 +3,7 @@
 import { api } from "../core/api.js?v=f1e8780b";
 import { esc } from "../core/logic.js?v=27fff957";
 import { loginNote, onLost, onRestored, login } from "../core/session.js?v=f1e8780b";
-import { refresh, S } from "../core/store.js?v=e0f3245a";
+import { refresh, S } from "../core/store.js?v=fd36140d";
 import { clearError } from "../ui/toast.js?v=c026fd86";
 
 const WIDGET_SRC = "https://telegram.org/js/telegram-widget.js?22";

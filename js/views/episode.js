@@ -3,13 +3,13 @@ import { api } from "../core/api.js?v=f1e8780b";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
 import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint } from "../core/logic.js?v=27fff957";
 import { go } from "../core/router.js?v=27d33f38";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=e0f3245a";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=fd36140d";
 import { haptic, openUrl } from "../core/tg.js?v=f1d7ce1d";
 import { confirmBox } from "../ui/confirm.js?v=24d167ee";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=2e46b762";
-import { questionBlock } from "../ui/question.js?v=38a2446a";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=53eb9974";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=91b94c25";
+import { questionBlock } from "../ui/question.js?v=622acfdf";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=8e391c5d";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */

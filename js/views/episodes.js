@@ -2,10 +2,10 @@
 import { api } from "../core/api.js?v=f1e8780b";
 import { agoText, daysBetween, epColumn, esc, fmt, META, STAGES } from "../core/logic.js?v=27fff957";
 import { currentRoute, go } from "../core/router.js?v=27d33f38";
-import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=e0f3245a";
+import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=fd36140d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { dueBadge, emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead } from "../ui/parts.js?v=2e46b762";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=53eb9974";
+import { dueBadge, emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead } from "../ui/parts.js?v=91b94c25";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=8e391c5d";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 // ---------- поиск и фильтры ----------
@@ -48,6 +48,7 @@ function toolbar(total, shown) {
   return `<div class="ep-tools">
     <div class="search">${icon("search")}<input class="inp" id="ep-q" type="search" data-act-input="ep-q" value="${esc(F.q)}" placeholder="${hint}" aria-label="Поиск выпуска по коду или теме" autocomplete="off" enterkeyhint="search"></div>
     <div class="seg"><button class="${mode === "board" ? "on" : ""}" data-act="ep-view" data-v="board">${icon("board")}Доска</button><button class="${mode === "list" ? "on" : ""}" data-act="ep-view" data-v="list">${icon("list")}Список</button></div>
+    ${mode === "board" ? `<button class="chip ${ui.epDense ? "on" : ""}" data-act="ep-dense" aria-pressed="${ui.epDense}" title="Карточки в две строки: больше выпусков на экране">${icon(ui.epDense ? "collapse" : "expand")}Компактно</button>` : ""}
     ${projectChips()}
     <div class="filters">
       <select class="inp sel" id="ep-stage" data-act-change="ep-stage" aria-label="Фильтр по этапу">${stageOpts}</select>
@@ -71,7 +72,24 @@ function episodeRow(e) {
     <div class="stage-labels">${STAGES.map((s) => `<span>${META[s].n}</span>`).join("")}</div></div>`;
 }
 
+/** Компактная карточка: строка «проект · код … срок» и тема в одну строку. Полная тема — в подсказке. */
+function kanbanCardDense(e, col) {
+  const p = proj(e.project_id);
+  let meta;
+  if (col === "done") meta = `<span class="badge ok">${fmt(e.publish_date)}</span>`;
+  else {
+    const i = stageInfo(e.id, col);
+    meta = (i.total > 1 ? `<span class="num">${i.done}/${i.total}</span>` : "")
+      + (!i.active ? `<span title="ждёт предыдущий этап">${icon("hourglass")}</span>` : "")
+      + (i.active ? dueBadge(i.due) : `<span class="badge">${fmt(e.publish_date)}</span>`);
+  }
+  return `<div class="kcard dense" style="${pc(p)}" data-act="open-episode" data-id="${e.id}" title="${esc(e.title)}">
+    <div class="kh"><span class="muted small ellipsis"><b>${esc(`${p ? p.emoji : ""} ${e.code}`.trim())}</b>${isManaged(e) ? ` <span title="Выпуск ведёт робот">${icon("robot")}</span>` : ""} ${esc(p ? p.name : "")}</span><span class="mt">${meta}</span></div>
+    <div class="tt">${esc(e.title)}</div></div>`;
+}
+
 function kanbanCard(e, col) {
+  if (ui.epDense) return kanbanCardDense(e, col);
   const p = proj(e.project_id);
   let meta = "";
   if (col === "done") meta = `<span class="to-end badge ok">${fmt(e.publish_date)}</span>`;
@@ -196,9 +214,9 @@ export function view() {
     }
     const late = c.id !== "done" && items.some((e) => stageInfo(e.id, c.id).late);
     return `<div class="col" data-key="col-${c.id}"><div class="col-h">${icon(c.i)}${c.n}<span class="n ${late ? "late" : ""}">${byCol[c.id].length}</span></div>
-      ${items.map((e) => kanbanCard(e, c.id)).join("") || `<div class="col-empty">пусто</div>`}${more}</div>`;
+      <div class="col-body">${items.map((e) => kanbanCard(e, c.id)).join("") || `<div class="col-empty">пусто</div>`}${more}</div></div>`;
   }).join("")}</div>
-  <div class="muted small note-line">Выпуск стоит в колонке этапа, который ещё не закрыт. Песочные часы — ждёт предыдущий этап.</div>`;
+  <div class="muted small note-line">Выпуск стоит в колонке этапа, который ещё не закрыт. Песочные часы — ждёт предыдущий этап. Колонка листается сама, заголовок остаётся на месте.</div>`;
   return html;
 }
 
@@ -209,6 +227,7 @@ const setField = (id, v) => { const el = document.getElementById(id); if (el) el
 
 export const actions = {
   "ep-view": (el) => { ui.epView = el.dataset.v; store("epView", ui.epView); render(); },
+  "ep-dense": () => { ui.epDense = !ui.epDense; store("epDense", ui.epDense ? "1" : "0"); render(); },
   "input:ep-q": (el) => { F.q = el.value; render(); },
   "change:ep-stage": (el) => { F.stage = el.value; render(); },
   "change:ep-person": (el) => { F.person = el.value; render(); },

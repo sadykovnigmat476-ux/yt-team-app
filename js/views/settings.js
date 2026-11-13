@@ -2,14 +2,14 @@
 import { api } from "../core/api.js?v=f1e8780b";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
 import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=27fff957";
-import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=e0f3245a";
+import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=fd36140d";
 import { go } from "../core/router.js?v=27d33f38";
 import * as session from "../core/session.js?v=f1e8780b";
 import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=f1d7ce1d";
 import { confirmBox } from "../ui/confirm.js?v=24d167ee";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=2e46b762";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=53eb9974";
+import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=91b94c25";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=8e391c5d";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 

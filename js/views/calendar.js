@@ -3,12 +3,12 @@ import { api } from "../core/api.js?v=f1e8780b";
 import { byId } from "../core/dom.js?v=3f6425ae";
 import { addDays, dayEvents as dayEventsOf, esc, fmt, formatTag, META, MONTHS, nextPublishDay, PREV, publishDaysNote, WD, weekday } from "../core/logic.js?v=27fff957";
 import { currentRoute } from "../core/router.js?v=27d33f38";
-import { act, ep, epHead, episodeDone, epTasks, mem, pc, pcolor, proj, projChannels, render, S, store, ui } from "../core/store.js?v=e0f3245a";
+import { act, ep, epHead, episodeDone, epTasks, mem, pc, pcolor, proj, projChannels, render, S, store, ui } from "../core/store.js?v=fd36140d";
 import { haptic } from "../core/tg.js?v=f1d7ce1d";
 import { confirmBox } from "../ui/confirm.js?v=24d167ee";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, projectChips, sheetHead } from "../ui/parts.js?v=2e46b762";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=53eb9974";
+import { emptyBlock, projectChips, sheetHead } from "../ui/parts.js?v=91b94c25";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=8e391c5d";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 const dayEvents = (d) => dayEventsOf(S, d, ui.project);

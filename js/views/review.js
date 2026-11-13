@@ -2,9 +2,9 @@
 import { api } from "../core/api.js?v=f1e8780b";
 import { esc, langTag } from "../core/logic.js?v=27fff957";
 import { currentRoute, go } from "../core/router.js?v=27d33f38";
-import { act, render, ui } from "../core/store.js?v=e0f3245a";
+import { act, render, ui } from "../core/store.js?v=fd36140d";
 import { confirmBox } from "../ui/confirm.js?v=24d167ee";
-import { emptyBlock } from "../ui/parts.js?v=2e46b762";
+import { emptyBlock } from "../ui/parts.js?v=91b94c25";
 import { icon } from "../ui/icons.js?v=2008de79";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";

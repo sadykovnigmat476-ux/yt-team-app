@@ -5,7 +5,7 @@
 import { markTappable } from "../core/logic.js?v=27fff957";
 import { morph } from "../core/morph.js?v=b4de8c1c";
 import { currentRoute, writeHistory } from "../core/router.js?v=27d33f38";
-import { ui } from "../core/store.js?v=e0f3245a";
+import { ui } from "../core/store.js?v=fd36140d";
 import { confirmBox } from "./confirm.js?v=24d167ee";
 import { domDirty } from "./form.js?v=f5f84293";
 

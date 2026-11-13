@@ -150,6 +150,15 @@
   for (const s of STAGES) done(e4.id, s);
   createEpisode({ project_id: 2, title: "Фаланга против легиона", publish_date: add(today, 13) }, true);
   void e2;
+  // &many=1 — восемьдесят выпусков: длинные колонки доски, как у живой команды
+  if (new URLSearchParams(location.search).has("many")) {
+    const T = ["Почему лёд скользкий", "Битва при Таликоте", "Все способы получить золото", "Что было страшнее динозавров", "Мусорный полигон: 7 слоёв", "Простые вопросы о погоде, на которые у науки нет ответа", "Гавгамелы, ч.1", "Самые сложные фигуры геометрии"];
+    for (let i = 0; i < 80; i++) {
+      const e = createEpisode({ project_id: 1 + (i % 3), title: `${T[i % T.length]} (${i + 1})`, publish_date: add(today, (i % 15) - 4) }, true);
+      const upto = i % 5; // 0 — сценарий, 4 — вышло
+      STAGES.slice(0, upto).forEach((s) => done(e.id, s));
+    }
+  }
 
   // ---- пульт робота: зеркало контракта robot.state / robot.pause / robot.project / robot.episode / robot.until ----
   // &nopulse=1 — у идущей прогонки пульс старше 15 минут (красное «нет пульса»); &emptyrobot=1 — пустое состояние без проектов и выпусков
