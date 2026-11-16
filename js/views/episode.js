@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=f1e8780b";
+import { api } from "../core/api.js?v=bfc7278e";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint } from "../core/logic.js?v=27fff957";
-import { go } from "../core/router.js?v=27d33f38";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=fd36140d";
-import { haptic, openUrl } from "../core/tg.js?v=f1d7ce1d";
-import { confirmBox } from "../ui/confirm.js?v=24d167ee";
+import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint } from "../core/logic.js?v=538f2fbe";
+import { go } from "../core/router.js?v=778b84f0";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=b65bdaf4";
+import { haptic, openUrl } from "../core/tg.js?v=eaa5648d";
+import { confirmBox } from "../ui/confirm.js?v=5f1dba7f";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=91b94c25";
-import { questionBlock } from "../ui/question.js?v=622acfdf";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=8e391c5d";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=6730a932";
+import { questionBlock } from "../ui/question.js?v=14d9f086";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=03319fe7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */

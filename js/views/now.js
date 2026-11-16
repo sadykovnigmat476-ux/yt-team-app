@@ -1,16 +1,16 @@
 // «Сейчас»: что ждёт владельца, главная задача крупно, остальное по срочности.
-import { api } from "../core/api.js?v=f1e8780b";
-import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV, stageDay } from "../core/logic.js?v=27fff957";
-import { currentRoute, go } from "../core/router.js?v=27d33f38";
-import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=fd36140d";
-import { openUrl } from "../core/tg.js?v=f1d7ce1d";
+import { api } from "../core/api.js?v=bfc7278e";
+import { agoText, dueInfo, esc, fmt, folderLink, META, nowBuckets, nowGroups, PREV, stageDay } from "../core/logic.js?v=538f2fbe";
+import { currentRoute, go } from "../core/router.js?v=778b84f0";
+import { act, blocker, ep, epBtn, epLabel, markDone, mem, pc, proj, rel, render, S, ui } from "../core/store.js?v=b65bdaf4";
+import { openUrl } from "../core/tg.js?v=eaa5648d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=91b94c25";
-import { questionBlock } from "../ui/question.js?v=622acfdf";
+import { closeLocked, dueBadge, langChip, LOCK_TEXT, onboarding, progressBars } from "../ui/parts.js?v=6730a932";
+import { questionBlock } from "../ui/question.js?v=14d9f086";
 import { toast } from "../ui/toast.js?v=c026fd86";
-import { openEpisode } from "./episode.js?v=80a4c520";
-import { loadFolders, openFolderQuestion } from "./episodes.js?v=f75dda96";
-import { noEmoji } from "./robot.js?v=1bf5e6af";
+import { openEpisode } from "./episode.js?v=5c1b7dc0";
+import { loadFolders, openFolderQuestion } from "./episodes.js?v=b0bf002a";
+import { noEmoji } from "./robot.js?v=00adef39";
 
 // ---------- «Ждёт тебя»: решения владельца в одном списке ----------
 const inbox = { data: null, error: null, loading: false, all: false };

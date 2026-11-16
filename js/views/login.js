@@ -1,9 +1,9 @@
 // Вход из браузера: виджет Telegram. Весь экран — на запуске; поверх страницы — если сессия кончилась посреди работы,
 // тогда под окном остаётся всё, что введено. Внутри Telegram экрана нет: там вход незаметен.
-import { api } from "../core/api.js?v=f1e8780b";
-import { esc } from "../core/logic.js?v=27fff957";
-import { loginNote, onLost, onRestored, login } from "../core/session.js?v=f1e8780b";
-import { refresh, S } from "../core/store.js?v=fd36140d";
+import { api } from "../core/api.js?v=bfc7278e";
+import { esc } from "../core/logic.js?v=538f2fbe";
+import { loginNote, onLost, onRestored, login } from "../core/session.js?v=bfc7278e";
+import { refresh, S } from "../core/store.js?v=b65bdaf4";
 import { clearError } from "../ui/toast.js?v=c026fd86";
 
 const WIDGET_SRC = "https://telegram.org/js/telegram-widget.js?22";

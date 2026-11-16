@@ -259,6 +259,8 @@ export function epColumn(S, eid) {
   }
   return "done";
 }
+/** Выпуск выходит сегодня и ещё не вышел: день выхода — S.today (пояс команды), не все этапы закрыты. */
+export const outToday = (S, e) => !!e && !!e.publish_date && e.publish_date === S.today && epColumn(S, e.id) !== "done";
 
 export function nextCode(S, pid) {
   let max = 0;
