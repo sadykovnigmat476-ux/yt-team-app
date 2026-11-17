@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=bfc7278e";
+import { api } from "../core/api.js?v=cafb6fb1";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint } from "../core/logic.js?v=538f2fbe";
-import { go } from "../core/router.js?v=778b84f0";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=b65bdaf4";
-import { haptic, openUrl } from "../core/tg.js?v=eaa5648d";
-import { confirmBox } from "../ui/confirm.js?v=5f1dba7f";
+import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=7de73893";
+import { go } from "../core/router.js?v=14af5890";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=2c23c78f";
+import { haptic, openUrl } from "../core/tg.js?v=fcb7ac82";
+import { confirmBox } from "../ui/confirm.js?v=4bd3b6ae";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=6730a932";
-import { questionBlock } from "../ui/question.js?v=14d9f086";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=03319fe7";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=6da76417";
+import { questionBlock } from "../ui/question.js?v=654eb9d3";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=e20b0998";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */
@@ -176,13 +176,13 @@ const shortWhen = (iso) => {
   return `${fmt(iso.slice(0, 10))}, ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
-/** «Закрыл Нигмат · 3 ноя, 14:20»; закрыто ботом по файлам — «по файлам на Диске». По языкам: «RU EN — Павел …». */
-function closedBy(ts) {
+/** «Закрыл Нигмат · 3 ноя, 14:20»; ботом — «по файлам на Диске», выкладку — «на YouTube». По языкам: «RU EN — Павел …». */
+function closedBy(ts, stage) {
   const done = ts.filter((t) => t.done_at);
   if (!done.length) return "";
   const groups = new Map();
   for (const t of done) {
-    const who = t.done_by == null ? "по файлам на Диске" : (mem(t.done_by) || { name: "кто-то" }).name;
+    const who = closedByBot(stage, t.done_by) ?? (mem(t.done_by) || { name: "кто-то" }).name;
     const key = `${who}|${shortWhen(t.done_at)}`;
     const c = chan(t.channel_id);
     (groups.get(key) || groups.set(key, { who, at: shortWhen(t.done_at), langs: [] }).get(key)).langs.push(c ? langTag(c.lang) : "");
@@ -190,7 +190,7 @@ function closedBy(ts) {
   const single = ts.length === 1 && !ts[0].channel_id;
   return [...groups.values()].map((g) => {
     const langs = g.langs.filter(Boolean).join(" ");
-    return `${single ? (g.who.startsWith("по") ? "Закрыто " : "Закрыл ") : langs ? esc(langs) + " — " : ""}${esc(g.who)}${g.at ? " · " + esc(g.at) : ""}`;
+    return `${single ? (closedByBot(stage, null) === g.who ? "Закрыто " : "Закрыл ") : langs ? esc(langs) + " — " : ""}${esc(g.who)}${g.at ? " · " + esc(g.at) : ""}`;
   }).join("; ");
 }
 
@@ -222,12 +222,15 @@ function stageBox(e, st, noteLock) {
   } else {
     body = `<div class="chips">${i.ts.map((t) => stageChip(t, locked)).join("")}</div>${!locked && openActive.length > 1 ? `<button class="btn sm mt-2" data-act="done" data-ids="${openActive.map((t) => t.id).join(",")}">Все ${openActive.length} готовы</button>` : ""}`;
   }
-  const who = closedBy(i.ts);
+  const who = closedBy(i.ts, st);
+  // ролики на YouTube — у самой выкладки, а не только внизу в «Ссылках»
+  const yt = st === "upload" ? [...youtubeByLang(S.links, e.id)] : [];
+  const ytRow = yt.length ? `<div class="yt-row small mt-2">${icon("play")}<span class="muted">На YouTube:</span>${yt.map(([lang, url]) => `<a class="chip yt" href="${esc(url)}" data-act="open-link" aria-label="Ролик ${esc(langTag(lang))} на YouTube">${esc(langTag(lang))}</a>`).join("")}</div>` : "";
   return `<div class="stage-box" data-key="stage-${st}"><div class="head"><b class="grow with-ic">${icon(META[st].i)}${META[st].n}</b>
     <select data-act-change="assign" data-ids="${ids}" aria-label="Ответственный: ${META[st].n}">${assignees.length > 1 ? `<option selected>разные</option>` : ""}${memberOptions(assignees.length === 1 ? assignees[0] : undefined)}</select>
     <input type="date" data-act-change="due" data-ids="${i.ts.filter((t) => !t.done_at).map((t) => t.id).join(",")}" value="${i.due || ""}" ${i.done === i.total ? "disabled" : ""} aria-label="Срок: ${META[st].n}"></div>
     ${body}${locked && !i.done && noteLock ? `<div class="note lock-note">${icon("robot")}<span>${LOCK_TEXT}</span></div>` : ""}
-    ${who ? `<div class="muted small mt-2 closed-by">${icon("check-circle")}<span>${who}</span></div>` : ""}
+    ${who ? `<div class="muted small mt-2 closed-by">${icon("check-circle")}<span>${who}</span></div>` : ""}${ytRow}
     ${i.late ? `<div class="small tone-bad with-ic mt-2">${icon("alert")}срок был ${fmt(i.due)}</div>` : ""}</div>`;
 }
 

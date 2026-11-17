@@ -147,6 +147,8 @@ h2.between { justify-content: space-between; }
 .robot-note .grow, .robot-note span { flex: 1; min-width: 0; }
 .closed-by { display: flex; gap: var(--sp-1); align-items: flex-start; }
 .closed-by .ic { color: var(--ok); margin-top: 2px; }
+.yt-row { display: flex; flex-wrap: wrap; gap: var(--sp-1); align-items: center; }
+.yt-row > .ic { color: var(--ok); }
 .chip.static { cursor: default; }
 .chip.static:hover { background: inherit; }
 .chip.lang.done.static:hover { background: var(--ok-bg); }

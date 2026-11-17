@@ -87,6 +87,25 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
 // язык — всегда кодом (RU), без флагов: флаг — это страна, а не язык, и на Windows он не рисуется
 export const langTag = (l) => String(l || "?").toUpperCase();
 
+/**
+ * Кто закрыл задачу без человека (done_by пусто). Выкладку так закрывает только автоотметка по ленте YouTube
+ * (youtube.ts), остальные этапы — файлы на Диске (drive_sync, drive_recheck). Человек — null: имя берёт вызывающий.
+ */
+export const closedByBot = (stage, doneBy) => (doneBy != null ? null : stage === "upload" ? "на YouTube" : "по файлам на Диске");
+
+/**
+ * Ролики выпуска на YouTube по языкам: ссылки «YouTube XX» этапа выкладки, которые пишет автоотметка (addLink в youtube.ts).
+ * Перезаливка того же языка — последняя ссылка. Порядок — как у языков в links.
+ */
+export function youtubeByLang(links, eid) {
+  const out = new Map();
+  for (const l of links || []) {
+    const m = l.episode_id === eid && l.stage === "upload" && /^YouTube ([A-Za-z]{2})$/.exec(String(l.title || "").trim());
+    if (m) out.set(m[1].toLowerCase(), l.url);
+  }
+  return out;
+}
+
 export const dParse = (d) => new Date(d + "T00:00:00Z");
 export const addDays = (d, n) => { const x = dParse(d); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 export const weekday = (d) => (dParse(d).getUTCDay() + 6) % 7;

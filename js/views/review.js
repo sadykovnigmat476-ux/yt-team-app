@@ -1,10 +1,10 @@
 // Проверка стоп-кадров и приёмка выпуска (владелец): кадры, красное и жёлтое по языкам, «Ок», возврат языков, «Принять несмотря на».
-import { api } from "../core/api.js?v=bfc7278e";
-import { esc, langTag } from "../core/logic.js?v=538f2fbe";
-import { currentRoute, go } from "../core/router.js?v=778b84f0";
-import { act, render, ui } from "../core/store.js?v=b65bdaf4";
-import { confirmBox } from "../ui/confirm.js?v=5f1dba7f";
-import { emptyBlock } from "../ui/parts.js?v=6730a932";
+import { api } from "../core/api.js?v=cafb6fb1";
+import { esc, langTag } from "../core/logic.js?v=7de73893";
+import { currentRoute, go } from "../core/router.js?v=14af5890";
+import { act, render, ui } from "../core/store.js?v=2c23c78f";
+import { confirmBox } from "../ui/confirm.js?v=4bd3b6ae";
+import { emptyBlock } from "../ui/parts.js?v=6da76417";
 import { icon } from "../ui/icons.js?v=2008de79";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";

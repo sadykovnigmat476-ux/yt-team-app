@@ -146,6 +146,11 @@
   const e2 = createEpisode({ project_id: 2, title: "Почему римляне строили лагерь каждый вечер", publish_date: add(today, 6) }, true);
   const e3 = createEpisode({ project_id: 3, title: "Ровно 5 мест, где можно припарковаться в космосе", publish_date: add(today, 1) }, true);
   done(e3.id, "script"); done(e3.id, "voice"); done(e3.id, "edit"); done(e3.id, "upload", 2);
+  // две выкладки закрыла автоотметка YouTube: done_by пусто и ссылка «YouTube XX» (как youtube.ts)
+  for (const t of st.tasks.filter((t) => t.episode_id === e3.id && t.stage === "upload" && t.done_at)) {
+    const c = st.channels.find((c) => c.id === t.channel_id);
+    st.links.push({ id: lid++, episode_id: e3.id, stage: "upload", url: `https://youtu.be/demo-${c.lang}`, title: `YouTube ${c.lang.toUpperCase()}` });
+  }
   const e4 = createEpisode({ project_id: 1, title: "Ньютон и яблоко: что было на самом деле", publish_date: add(today, -2) }, true);
   for (const s of STAGES) done(e4.id, s);
   createEpisode({ project_id: 2, title: "Фаланга против легиона", publish_date: add(today, 13) }, true);

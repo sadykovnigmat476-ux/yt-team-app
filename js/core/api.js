@@ -1,6 +1,6 @@
 // Транспорт к серверу. На моке вместо сети — window.MOCK_API: тот же контракт action/body.
-import { authHeaders } from "./session.js?v=bfc7278e";
-import { MOCK } from "./tg.js?v=eaa5648d";
+import { authHeaders } from "./session.js?v=cafb6fb1";
+import { MOCK } from "./tg.js?v=fcb7ac82";
 
 const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || "";
 const FETCH_TIMEOUT_MS = 20000;
