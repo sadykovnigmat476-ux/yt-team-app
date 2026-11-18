@@ -1,7 +1,7 @@
 // Куски разметки, общие для нескольких экранов.
-import { canFullscreen, openUrl, tg } from "../core/tg.js?v=fcb7ac82";
-import { daysBetween, esc, fmt, formatTag, KINDS, langTag, META, projChannels, STAGES } from "../core/logic.js?v=7de73893";
-import { chan, epHead, isActive, pc, render, S, stageInfo, store, topicBound, ui } from "../core/store.js?v=2c23c78f";
+import { canFullscreen, openUrl, tg } from "../core/tg.js?v=61aa9265";
+import { daysBetween, esc, fmt, formatTag, KINDS, langTag, META, projChannels, STAGES } from "../core/logic.js?v=70ae8192";
+import { chan, epHead, isActive, pc, render, S, stageInfo, store, topicBound, ui } from "../core/store.js?v=c05eeebe";
 import { toast } from "./toast.js?v=c026fd86";
 import { icon } from "./icons.js?v=2008de79";
 
@@ -13,6 +13,18 @@ export function dueBadge(d, done, today = S.today) {
   const n = daysBetween(today, d);
   const cls = n < 0 ? "late" : n === 0 ? "today" : "";
   return `<span class="badge ${cls}">${n < 0 ? icon("alert") : ""}${fmt(d)}</span>`;
+}
+
+/**
+ * Срок этапа на карточке выпуска. Красный — только когда прошедший срок грозит выходу (i.late),
+ * жёлтый — выход завтра (i.warn); прошёл срок, а выход в запасе — серая дата с подсказкой.
+ */
+export function stageBadge(i) {
+  if (!i.due) return "";
+  const n = daysBetween(S.today, i.due);
+  const cls = i.late ? "late" : i.warn || n === 0 ? "today" : "";
+  const title = i.slipped && !i.late ? ` title="срок этапа прошёл, выход в срок"` : "";
+  return `<span class="badge ${cls}"${title}>${i.late ? icon("alert") : ""}${fmt(i.due)}</span>`;
 }
 
 /** HTML-строка выпуска: жирная голова + название (для карточек и списков) + 2D/3D. */
@@ -109,7 +121,7 @@ export const actions = {
 };
 
 // ---------- общее для экранов команды ----------
-import { proj as projectOf } from "../core/store.js?v=2c23c78f";
+import { proj as projectOf } from "../core/store.js?v=c05eeebe";
 
 /** Пустое место с объяснением: что здесь будет и что сделать. extra — готовая разметка кнопок. */
 export function emptyBlock(iconName, title, hint, extra = "") {

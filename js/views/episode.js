@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=cafb6fb1";
+import { api } from "../core/api.js?v=d2a93c0b";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=7de73893";
-import { go } from "../core/router.js?v=14af5890";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=2c23c78f";
-import { haptic, openUrl } from "../core/tg.js?v=fcb7ac82";
-import { confirmBox } from "../ui/confirm.js?v=4bd3b6ae";
+import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=70ae8192";
+import { go } from "../core/router.js?v=77437a2f";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=c05eeebe";
+import { haptic, openUrl } from "../core/tg.js?v=61aa9265";
+import { confirmBox } from "../ui/confirm.js?v=e195854d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=6da76417";
-import { questionBlock } from "../ui/question.js?v=654eb9d3";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=e20b0998";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=2d6ac248";
+import { questionBlock } from "../ui/question.js?v=b8269126";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=db3d4f3a";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */
@@ -231,7 +231,8 @@ function stageBox(e, st, noteLock) {
     <input type="date" data-act-change="due" data-ids="${i.ts.filter((t) => !t.done_at).map((t) => t.id).join(",")}" value="${i.due || ""}" ${i.done === i.total ? "disabled" : ""} aria-label="Срок: ${META[st].n}"></div>
     ${body}${locked && !i.done && noteLock ? `<div class="note lock-note">${icon("robot")}<span>${LOCK_TEXT}</span></div>` : ""}
     ${who ? `<div class="muted small mt-2 closed-by">${icon("check-circle")}<span>${who}</span></div>` : ""}${ytRow}
-    ${i.late ? `<div class="small tone-bad with-ic mt-2">${icon("alert")}срок был ${fmt(i.due)}</div>` : ""}</div>`;
+    ${i.late ? `<div class="small tone-bad with-ic mt-2">${icon("alert")}срок был ${fmt(i.due)}, выход под угрозой</div>`
+      : i.slipped ? `<div class="small muted with-ic mt-2">${icon("clock")}срок этапа был ${fmt(i.due)}, выход ещё в запасе</div>` : ""}</div>`;
 }
 
 function episodeSheet(id) {

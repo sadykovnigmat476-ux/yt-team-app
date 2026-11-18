@@ -1,11 +1,11 @@
 // «Выпуски»: поиск, фильтры, доска и список; вопросы бота по папкам Диска.
-import { api } from "../core/api.js?v=cafb6fb1";
-import { agoText, daysBetween, epColumn, esc, fmt, META, outToday, STAGES } from "../core/logic.js?v=7de73893";
-import { currentRoute, go } from "../core/router.js?v=14af5890";
-import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=2c23c78f";
+import { api } from "../core/api.js?v=d2a93c0b";
+import { agoText, daysBetween, epColumn, esc, fmt, META, outToday, STAGES } from "../core/logic.js?v=70ae8192";
+import { currentRoute, go } from "../core/router.js?v=77437a2f";
+import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=c05eeebe";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { dueBadge, emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead } from "../ui/parts.js?v=6da76417";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=e20b0998";
+import { emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead, stageBadge } from "../ui/parts.js?v=2d6ac248";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=db3d4f3a";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 // ---------- поиск и фильтры ----------
@@ -89,7 +89,7 @@ function kanbanCardDense(e, col) {
     const i = stageInfo(e.id, col);
     meta = (i.total > 1 ? `<span class="num">${i.done}/${i.total}</span>` : "")
       + (!i.active ? `<span title="ждёт предыдущий этап">${icon("hourglass")}</span>` : "")
-      + (i.active ? dueBadge(i.due) : `<span class="badge">${fmt(e.publish_date)}</span>`);
+      + (i.active ? stageBadge(i) : `<span class="badge">${fmt(e.publish_date)}</span>`);
   }
   return `<div class="kcard dense${isToday(e) ? " out-today" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}" title="${isToday(e) ? "Выходит сегодня · " : ""}${esc(e.title)}">
     <div class="kh"><span class="muted small ellipsis"><b>${esc(`${p ? p.emoji : ""} ${e.code}`.trim())}</b>${isManaged(e) ? ` <span title="Выпуск ведёт робот">${icon("robot")}</span>` : ""} ${esc(p ? p.name : "")}</span><span class="mt">${meta}</span></div>
@@ -107,7 +107,7 @@ function kanbanCard(e, col) {
     meta = who.map((m) => `<span class="mini-ava" title="${esc(m.name)}">${initial(m)}</span>`).join("")
       + (i.total > 1 ? `<span class="num">${i.done}/${i.total}</span>` : "")
       + (!i.active ? `<span title="ждёт предыдущий этап">${icon("hourglass")}</span>` : "")
-      + `<span class="to-end">${i.active ? dueBadge(i.due) : `<span class="badge">выход ${fmt(e.publish_date)}</span>`}</span>`;
+      + `<span class="to-end">${i.active ? stageBadge(i) : `<span class="badge">выход ${fmt(e.publish_date)}</span>`}</span>`;
   }
   return `<div class="kcard${isToday(e) ? " out-today" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
     <div class="muted small ellipsis"><b>${esc(epHead(e))}</b>${isManaged(e) ? ` <span title="Выпуск ведёт робот">${icon("robot")}</span>` : ""}</div>

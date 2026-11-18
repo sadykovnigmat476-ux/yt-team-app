@@ -1,15 +1,15 @@
 // «Настройки»: команда, проекты, Диск, напоминания; форма проекта.
-import { api } from "../core/api.js?v=cafb6fb1";
+import { api } from "../core/api.js?v=d2a93c0b";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=7de73893";
-import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=2c23c78f";
-import { go } from "../core/router.js?v=14af5890";
-import * as session from "../core/session.js?v=cafb6fb1";
-import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=fcb7ac82";
-import { confirmBox } from "../ui/confirm.js?v=4bd3b6ae";
+import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=70ae8192";
+import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=c05eeebe";
+import { go } from "../core/router.js?v=77437a2f";
+import * as session from "../core/session.js?v=d2a93c0b";
+import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=61aa9265";
+import { confirmBox } from "../ui/confirm.js?v=e195854d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=6da76417";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=e20b0998";
+import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=2d6ac248";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=db3d4f3a";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 

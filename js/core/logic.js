@@ -257,14 +257,28 @@ export function isActive(S, t) {
 export const pcolor = (S, p) => (p && p.color) || PALETTE[Math.max(0, S.projects.indexOf(p)) % PALETTE.length];
 export const topicBound = (S, pid, kind) => (S.topics || []).some((t) => t.project_id === pid && t.kind === kind) || !!(projOf(S, pid) || {}).thread_id;
 
+/**
+ * Чем грозит прошедший срок этапа выходу ролика: "late" — выход сорван (день выхода настал, а этап до выкладки не закрыт;
+ * сама выкладка краснеет, только когда день выхода прошёл), "warn" — выход завтра, "ok" — запас есть.
+ * Сроки этапов — внутренний график (выход минус отступ проекта), робот работает ближе к выходу, поэтому
+ * сам по себе прошедший срок этапа красным не горит.
+ */
+export function releaseRisk(publishDate, stage, today) {
+  if (!publishDate) return "ok";
+  if (stage === "upload" ? publishDate < today : publishDate <= today) return "late";
+  return stage !== "upload" && daysBetween(today, publishDate) === 1 ? "warn" : "ok";
+}
+
 export function stageInfo(S, eid, stage) {
   const ts = epTasks(S, eid).filter((t) => t.stage === stage).sort((a, b) => chSort(S, a) - chSort(S, b));
   const done = ts.filter((t) => t.done_at).length;
   const active = ts.filter((t) => isActive(S, t)).length;
   // срок этапа — по открытым задачам: перенос закрытые не трогает, их старая дата не в счёт; всё закрыто — последняя показанная
   const due = ts.filter((t) => t.due_date && (done === ts.length || !t.done_at)).map((t) => t.due_date).sort()[0] || null;
-  const late = done < ts.length && active > 0 && due && due < S.today;
-  return { ts, done, total: ts.length, active, due, late };
+  // срок этапа прошёл и этап можно делать
+  const slipped = !!(done < ts.length && active > 0 && due && due < S.today);
+  const risk = slipped ? releaseRisk((epOf(S, eid) || {}).publish_date, stage, S.today) : "ok";
+  return { ts, done, total: ts.length, active, due, slipped, late: risk === "late", warn: risk === "warn" };
 }
 export function episodeDone(S, eid) {
   const ts = epTasks(S, eid);
