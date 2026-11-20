@@ -1,12 +1,12 @@
 // «Статистика»: команда, языки, выпуски, состояние бота.
-import { esc, fmt, fmtNum, langTag, META, signed } from "../core/logic.js?v=70ae8192";
-import { currentRoute } from "../core/router.js?v=77437a2f";
-import { api } from "../core/api.js?v=d2a93c0b";
-import { chan, proj, render, S, store, ui } from "../core/store.js?v=c05eeebe";
+import { esc, fmt, fmtNum, langTag, META, signed } from "../core/logic.js?v=ece754bc";
+import { currentRoute } from "../core/router.js?v=65625d97";
+import { api } from "../core/api.js?v=3e4d8fc3";
+import { chan, proj, render, S, store, ui } from "../core/store.js?v=67a6fbcd";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, fullscreenChip, projectChips } from "../ui/parts.js?v=2d6ac248";
+import { emptyBlock, fullscreenChip, projectChips } from "../ui/parts.js?v=d9685a9c";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
-import { table } from "../ui/table.js?v=79f58755";
+import { table } from "../ui/table.js?v=66cd030b";
 
 /** Подпись канала: своё имя, если задано, иначе «Аксиома RU» — проект и язык. */
 function chName(channelId, lang) {

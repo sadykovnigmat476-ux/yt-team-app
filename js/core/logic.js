@@ -195,6 +195,43 @@ export function robotRescue(e) {
   return { retry: a ? !!a.run_id : !!(e.run && e.run.status === "failed"), again: false };
 }
 
+// ---------- пульт робота: фильтры и аккаунты ----------
+/** Фильтры состояния в пульте: ключ, подпись. Ключ — тон строки (robotWhere на сервере), «Веду сам» — в «Остановлены». */
+export const RB_FILTERS = [["all", "Все"], ["work", "Идёт"], ["owner", "Ждёт тебя"], ["fail", "Проблемы"], ["stop", "Остановлены"], ["wait", "В очереди"]];
+
+/** В какой фильтр состояния попадает выпуск пульта. */
+export function robotFilterOf(e) {
+  if (e.manual) return "stop";
+  return RB_FILTERS.some(([k]) => k === e.tone) ? e.tone : "wait";
+}
+
+/** Аккаунт выпуска в пульте: у идущей прогонки — её, иначе закреплённый, иначе аккаунт последней прогонки; нет — null. */
+export function robotAccountOf(e) {
+  const run = e.run && e.run.account ? e.run.account : null;
+  if (e.run && e.run.status === "running" && run) return run;
+  return e.account_pin || run || null;
+}
+
+/** Подпись аккаунта: почта, у ~/.claude — «основной», иначе метка папки. Зеркало accountName в domain.ts. */
+export function accountLabel(a) {
+  if (!a) return "?";
+  return a.email || (a.key === "main" ? "основной" : a.key);
+}
+
+/**
+ * Выпуски пульта под фильтр { status, project, account }: status — ключ RB_FILTERS, project — id или null,
+ * account — ключ аккаунта, «none» — без аккаунта, null — любые. counts — сколько в каждом фильтре состояния при выбранных
+ * канале и аккаунте (числа на кнопках).
+ */
+export function robotFilterEpisodes(eps, f = {}) {
+  const status = f.status || "all";
+  const byOther = (eps || []).filter((e) => (f.project == null || e.project_id === f.project)
+    && (f.account == null || (f.account === "none" ? !robotAccountOf(e) : robotAccountOf(e) === f.account)));
+  const counts = Object.fromEntries(RB_FILTERS.map(([k]) => [k, 0]));
+  for (const e of byOther) { counts.all++; counts[robotFilterOf(e)]++; }
+  return { list: status === "all" ? byOther : byOther.filter((e) => robotFilterOf(e) === status), counts };
+}
+
 // ---------- выпуски и задачи ----------
 export const epTasks = (S, id) => S.tasks.filter((t) => t.episode_id === id);
 const chanOf = (S, id) => S.channels.find((c) => c.id === id);

@@ -309,6 +309,14 @@
       default: return { where: "", tone: "wait" };
     }
   }
+  // аккаунты Claude: как robot_hosts.accounts; прогонка идёт на закреплённом, если он не упёрся, иначе на первом свободном (runAccount)
+  const RB_ACCOUNTS = [
+    { key: "main", email: "owner@example.com", blocked: null, since: null },
+    { key: "claude-c", email: "team@example.com", blocked: null, since: null },
+    { key: "claude-b", email: null, blocked: "limit", since: isoAgo(90) },
+  ];
+  const rbPin = { 7: "claude-c" };
+  const RUN_ACCOUNT = { running: "claude-c", review: "main", failed: "claude-c", cap: "main", finalcap: "main", accept: "main" };
   function rbPanelEp(m) {
     const allowed = !!m.until && Date.parse(m.until) > Date.now();
     const w = rbWhere(m, allowed);
@@ -324,7 +332,8 @@
     return {
       id: m.id, project_id: m.pid, label: m.label, publish_date: m.pub, hold: m.hold, now_until: allowed ? m.until : null,
       robot_until: u, robot_until_own: m.own || null,
-      ...w, track, run,
+      ...w, track, run: run ? { ...run, account: RUN_ACCOUNT[m.kind] || null } : null,
+      account_pin: rbPin[m.id] || null,
       manual: !!m.manual,
       review: run && run.status === "review" ? { run_id: run.id, kind: run.phase === "accept" ? "accept" : "stills" } : null,
       question: asked ? questionView(asked) : null,
@@ -343,7 +352,8 @@
       where: "✅ выложен " + m.pub, tone: "done",
       track: [S("topic", "Тема", "done", m.code), S("script", "Сценарий", "done"), S("voice", "Озвучка", "done", "5 из 5"), S("montage", "Монтаж", "done", "2 части"),
         S("review", "Проверка", "done"), S("changes", "Правки", "skip", "правок не было"), S("final", "Финал", "done", "заход 1 из 12"), S("accept", "Приёмка", "done", "Ок"), S("upload", "Выкладка", "done", m.pub)],
-      run: { id: 99, phase: "final", part: 1, status: "done", host: "NIGMAT-PC", ...MODEL, started_at: isoAgo(3000), heartbeat_at: isoAgo(2990), log_tail: null, log_at: null, note: "Финал собран, ролик залит на Диск." },
+      run: { id: 99, phase: "final", part: 1, status: "done", host: "NIGMAT-PC", ...MODEL, started_at: isoAgo(3000), heartbeat_at: isoAgo(2990), log_tail: null, log_at: null, note: "Финал собран, ролик залит на Диск.", account: "main" },
+      account_pin: null,
     };
   }
   function robotState() {
@@ -355,6 +365,7 @@
       paused: rb.paused, owner: noOwner ? null : { tg_id: 1, name: "Нигмат" }, now: new Date().toISOString(), night: h >= rb.limits.night_from && h < rb.limits.night_to,
       owner_hint: noOwner ? "Владелец не задан: пульт открыт первому админу, сообщения робота идут всем админам. Задай settings.owner_id" : null,
       night_window: rb.limits.night_from + ":00–" + rb.limits.night_to + ":00", limits: { ...rb.limits }, effort_label: "high", hosts: rb.hosts,
+      accounts: qsm.has("emptyrobot") ? [] : RB_ACCOUNTS.map((a) => ({ ...a, host: "nigmat" })),
       usage7d: { tokens: 3184000, cost_usd: 42.7, hours: 31.5, runs: 27, lumean_tokens: 18400, night: { tokens: 612000, cost_usd: 8.3, hours: 5.2, runs: 4 } },
       pc_seen_at: qsm.has("emptyrobot") ? null : isoAgo(rb.seen),
       projects: st.projects.map((p) => ({
@@ -669,6 +680,14 @@
         else if (b.op === "now") { m.until = new Date(Date.now() + 12 * HOUR).toISOString(); m.hold = false; if (m.kind === "stopped") m.kind = "waitnight"; }
         else if (b.op === "night") m.until = null;
         else throw new Error("Неизвестная операция");
+        return { ok: true };
+      }
+      case "robot.account": {
+        const m = rbEps.find((x) => x.id === Number(b.episode_id));
+        if (!m) throw new Error("Выпуск " + b.episode_id + " не найден");
+        const v = b.account == null || b.account === "" ? null : String(b.account);
+        if (v !== null && !/^[A-Za-z0-9_-]{1,40}$/.test(v)) throw new Error("account: ключ аккаунта или null");
+        if (v) rbPin[m.id] = v; else delete rbPin[m.id];
         return { ok: true };
       }
       case "robot.until": {

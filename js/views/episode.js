@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=d2a93c0b";
+import { api } from "../core/api.js?v=3e4d8fc3";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=70ae8192";
-import { go } from "../core/router.js?v=77437a2f";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=c05eeebe";
-import { haptic, openUrl } from "../core/tg.js?v=61aa9265";
-import { confirmBox } from "../ui/confirm.js?v=e195854d";
+import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=ece754bc";
+import { go } from "../core/router.js?v=65625d97";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=67a6fbcd";
+import { haptic, openUrl } from "../core/tg.js?v=06b152bb";
+import { confirmBox } from "../ui/confirm.js?v=0b374d0b";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=2d6ac248";
-import { questionBlock } from "../ui/question.js?v=b8269126";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=db3d4f3a";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=d9685a9c";
+import { questionBlock } from "../ui/question.js?v=c8f984d0";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=3b5139f6";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */

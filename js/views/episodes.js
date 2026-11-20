@@ -1,11 +1,11 @@
 // «Выпуски»: поиск, фильтры, доска и список; вопросы бота по папкам Диска.
-import { api } from "../core/api.js?v=d2a93c0b";
-import { agoText, daysBetween, epColumn, esc, fmt, META, outToday, STAGES } from "../core/logic.js?v=70ae8192";
-import { currentRoute, go } from "../core/router.js?v=77437a2f";
-import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=c05eeebe";
+import { api } from "../core/api.js?v=3e4d8fc3";
+import { agoText, daysBetween, epColumn, esc, fmt, META, outToday, STAGES } from "../core/logic.js?v=ece754bc";
+import { currentRoute, go } from "../core/router.js?v=65625d97";
+import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=67a6fbcd";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead, stageBadge } from "../ui/parts.js?v=2d6ac248";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=db3d4f3a";
+import { emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead, stageBadge } from "../ui/parts.js?v=d9685a9c";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=3b5139f6";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 // ---------- поиск и фильтры ----------

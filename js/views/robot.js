@@ -1,13 +1,13 @@
 // Пульт робота (владелец): все выпуски робота от темы до выкладки, расход, управление выпуском и история прогонок.
-import { api } from "../core/api.js?v=d2a93c0b";
-import { agoText, esc, fmt, fmtNum, robotRescue } from "../core/logic.js?v=70ae8192";
-import { currentRoute, go } from "../core/router.js?v=77437a2f";
-import { act, isBusy, pc, proj, render, S, ui } from "../core/store.js?v=c05eeebe";
+import { api } from "../core/api.js?v=3e4d8fc3";
+import { accountLabel, agoText, esc, fmt, fmtNum, RB_FILTERS, robotAccountOf, robotFilterEpisodes, robotRescue } from "../core/logic.js?v=ece754bc";
+import { currentRoute, go } from "../core/router.js?v=65625d97";
+import { act, isBusy, pc, proj, render, S, ui } from "../core/store.js?v=67a6fbcd";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { confirmBox } from "../ui/confirm.js?v=e195854d";
-import { sheetHead } from "../ui/parts.js?v=2d6ac248";
-import { questionBlock } from "../ui/question.js?v=b8269126";
-import { openSheet } from "../ui/sheet.js?v=db3d4f3a";
+import { confirmBox } from "../ui/confirm.js?v=0b374d0b";
+import { sheetHead } from "../ui/parts.js?v=d9685a9c";
+import { questionBlock } from "../ui/question.js?v=c8f984d0";
+import { openSheet } from "../ui/sheet.js?v=3b5139f6";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
@@ -138,7 +138,7 @@ function robotRun(run, nowMs, d) {
   }
   const tone = run.status === "running" ? "ok" : run.status === "failed" ? "late" : run.status === "review" ? "today" : "";
   return `<div class="rb-run"><div class="row"><b class="grow with-ic">${icon("robot")}${esc(phase)}${part}</b><span class="badge ${tone}">${esc(RUN_RU[run.status] || run.status)}</span></div>
-    <div class="muted small">${run.host ? "ПК " + esc(run.host) : "ПК не указан"} · ${esc(run.model_label || "модель не указана")} · <b class="rb-level">${esc(effortText(run.effort_label))}</b>${pulse}</div></div>`;
+    <div class="muted small">${run.host ? "ПК " + esc(run.host) : "ПК не указан"}${run.account ? ` · аккаунт ${esc(accountLabel(accountOf(d, run.account)))}` : ""} · ${esc(run.model_label || "модель не указана")} · <b class="rb-level">${esc(effortText(run.effort_label))}</b>${pulse}</div></div>`;
 }
 
 /** «Робот ведёт до» (robot.until): у проекта — по умолчанию для новых выпусков, у выпуска — своё или «как у проекта». */
@@ -154,18 +154,50 @@ function robotUntilRow(e) {
   return `<label class="rb-until"><span>Робот ведёт до:</span><select class="rb-sel" data-act-change="robot-until" data-ep="${Number(e.id)}" aria-label="Робот ведёт выпуск до этапа">${untilOptions(e.robot_until_own || "", inherit)}</select></label>`;
 }
 
+/** Аккаунт по ключу из robot.state → accounts; машина о нём не говорила — только ключ. */
+const accountOf = (d, key) => ((d && d.accounts) || []).find((a) => a.key === key) || { key, email: null };
+const BLOCK_RU = { limit: "кончился лимит", auth: "нет входа", no_claude: "нет claude" };
+
+/** Аккаунт Claude выпуска (robot.account): «Авто» — машина берёт первый без лимита; закреплённый упёрся — тоже первый свободный. */
+function accountRow(e, d) {
+  const list = d.accounts || [];
+  if (list.length < 2 && !e.account_pin) return "";
+  const opts = list.map((a) => `<option value="${esc(a.key)}" ${e.account_pin === a.key ? "selected" : ""}>${esc(accountLabel(a))}${a.blocked ? ` · ${esc(BLOCK_RU[a.blocked] || a.blocked)}` : ""}</option>`).join("");
+  const gone = e.account_pin && !list.some((a) => a.key === e.account_pin) ? `<option value="${esc(e.account_pin)}" selected>${esc(e.account_pin)} · машина о нём не говорит</option>` : "";
+  return `<label class="rb-until"><span>Аккаунт Claude:</span><select class="rb-sel" data-act-change="rb-account" data-ep="${Number(e.id)}" aria-label="Аккаунт Claude для выпуска">
+    <option value="" ${e.account_pin ? "" : "selected"}>Авто · первый без лимита</option>${opts}${gone}</select></label>`;
+}
+
+/** Плашка аккаунта в шапке карточки: у идущей прогонки — её аккаунт, иначе закреплённый или последний. */
+function accountBadge(e, d) {
+  const key = robotAccountOf(e);
+  if (!key) return "";
+  const a = accountOf(d, key);
+  const pinned = e.account_pin === key;
+  const off = e.account_pin && e.account_pin !== key && e.run && e.run.status === "running";
+  const title = (pinned ? "Закреплён за выпуском" : "Аккаунт прогонки") + (off ? `: закреплённый ${accountLabel(accountOf(d, e.account_pin))} не взят` : "");
+  return `<span class="badge rb-acc ${a.blocked ? "late" : ""}" title="${esc(title)}">${icon("user")}${esc(accountLabel(a))}${pinned ? " · закреплён" : ""}${off ? " · не закреплённый" : ""}</span>`;
+}
+
 const projectBusy = (d, pid) => ((d.projects || []).find((p) => p.id === pid) || {}).busy_since || null;
 
 function robotEpisode(e, nowMs, withActs, d) {
   const p = proj(e.project_id);
+  const open = ui.robot.expandAll || (ui.robot.open && ui.robot.open.has(e.id));
   const allowed = e.now_until && Date.parse(e.now_until) > nowMs;
   const running = !!(e.run && e.run.status === "running");
   const busySince = projectBusy(d, e.project_id);
   const { retry, again } = robotRescue(e);
   const date = e.publish_date ? `<span class="badge">${e.tone === "done" ? "вышел" : "выход"} ${esc(fmt(e.publish_date))}</span>` : "";
-  const badges = [e.hold ? `<span class="badge late">стоп</span>` : "", e.manual ? `<span class="badge today">веду сам</span>` : "",
+  const badges = [accountBadge(e, d), e.hold ? `<span class="badge late">стоп</span>` : "", e.manual ? `<span class="badge today">веду сам</span>` : "",
     busySince ? `<span class="badge today" title="Ты работал в папке проекта: робот не берёт новую работу">папка занята</span>` : "", date].join("");
 
+  const head = `<button class="rb-toggle" data-act="rb-open" data-id="${e.id}" aria-expanded="${open ? "true" : "false"}">
+      <span class="grow title break">${esc(e.label)}</span>${icon(open ? "chevron-down" : "chevron-right")}</button>`;
+  if (!open) {
+    return `<div class="card pc-stripe rb-ep shut" data-key="rb-ep-${e.id}" style="${pc(p)}">${head}
+      ${badges ? `<div class="rb-badges">${badges}</div>` : ""}${whereLine(e)}${e.question ? `<div class="muted small with-ic">${icon("info")}Робот задал вопрос — открой карточку</div>` : ""}</div>`;
+  }
   let acts = "";
   if (withActs) {
     const main = [], b = [];
@@ -186,7 +218,7 @@ function robotEpisode(e, nowMs, withActs, d) {
       b.push(`<button class="btn sm" data-key="rb-give-${e.id}" data-act="rb-manual" data-id="${e.id}" data-manual="0">${icon("robot")}Отдать роботу</button>`);
     }
     b.push(`<button class="btn sm ghost" data-key="rb-more-${e.id}" data-act="rb-manage" data-id="${e.id}">${icon("list")}Подробнее</button>`);
-    acts = `${e.manual ? "" : robotUntilRow(e)}${main.length ? `<div class="rb-acts main">${main.join("")}</div>` : ""}<div class="rb-acts">${b.join("")}</div>`
+    acts = `${e.manual ? "" : robotUntilRow(e)}${e.manual ? "" : accountRow(e, d)}${main.length ? `<div class="rb-acts main">${main.join("")}</div>` : ""}<div class="rb-acts">${b.join("")}</div>`
       + (allowed ? `<div class="note warn">Днём разрешено до ${esc(clockText(e.now_until, nowMs))}. Возьмёт при следующем заходе <code>ytbot run</code> (с <code>--watch</code> — раз в 10 минут).</div>` : "");
   } else {
     acts = `<div class="rb-acts"><button class="btn sm ghost" data-key="rb-more-${e.id}" data-act="rb-manage" data-id="${e.id}">${icon("list")}История</button></div>`;
@@ -194,7 +226,7 @@ function robotEpisode(e, nowMs, withActs, d) {
   const miss = retry && e.missing && e.missing.length
     ? `<div class="rb-miss">${e.missing.map((m) => `<span class="pill miss">${esc(m)}</span>`).join("")}</div>` : "";
   return `<div class="card pc-stripe rb-ep" data-key="rb-ep-${e.id}" style="${pc(p)}">
-    <div class="row top"><div class="grow title break">${esc(e.label)}</div></div>
+    ${head}
     ${badges ? `<div class="rb-badges">${badges}</div>` : ""}
     ${whereLine(e)}${e.fixing ? `<div class="rb-where wait">${icon(WHERE_ICON.wait)}<span>${esc(e.fixing)}</span></div>` : ""}${miss}${e.question ? questionBlock(e.question) : ""}
     <div class="rb-steps">${(e.track || []).map(robotStep).join("")}</div>
@@ -288,6 +320,46 @@ function openManage(id) {
   openSheet(manageView, null, { mode: "panel" });
 }
 
+// ---------- фильтры пульта ----------
+const FILTER_KEY = "rb-filter";
+/** Фильтр пульта: состояние, канал, аккаунт. Запоминается в браузере (приватное окно — только до закрытия). */
+function filterOf() {
+  const r = ui.robot;
+  if (!r.filter) {
+    let f = null;
+    try { f = JSON.parse(localStorage.getItem(FILTER_KEY) || "null"); } catch (_) { f = null; }
+    r.filter = {
+      status: f && RB_FILTERS.some(([k]) => k === f.status) ? f.status : "all",
+      project: f && Number.isSafeInteger(f.project) ? f.project : null,
+      account: f && typeof f.account === "string" ? f.account : null,
+    };
+  }
+  return r.filter;
+}
+function setFilter(patch) {
+  const f = Object.assign(filterOf(), patch);
+  try { localStorage.setItem(FILTER_KEY, JSON.stringify(f)); } catch (_) { /* без хранилища — до закрытия */ }
+  render();
+}
+
+/** Кнопки состояний с числами и списки «канал», «аккаунт». Выбранные канал или аккаунт остаются в списке, даже если выпусков у них нет. */
+function filterBar(d, eps, f, counts) {
+  const chips = RB_FILTERS.map(([k, n]) => `<button class="chip ${f.status === k ? "on" : ""} ${k === "fail" && counts[k] ? "rb-hot" : ""}" data-key="rb-f-${k}" data-act="rb-filter" data-status="${k}" aria-pressed="${f.status === k}">${n} · ${counts[k] || 0}</button>`).join("");
+  const pids = [...new Set([...eps.map((e) => e.project_id), ...(f.project != null ? [f.project] : [])])];
+  const pOpts = pids.map((id) => {
+    const p = proj(id);
+    return `<option value="${id}" ${f.project === id ? "selected" : ""}>${esc(p ? `${p.emoji || ""} ${p.name}`.trim() : `Проект ${id}`)}</option>`;
+  }).join("");
+  const keys = [...new Set([...(d.accounts || []).map((a) => a.key), ...eps.map(robotAccountOf).filter(Boolean), ...(f.account && f.account !== "none" ? [f.account] : [])])];
+  const aOpts = keys.map((k) => `<option value="${esc(k)}" ${f.account === k ? "selected" : ""}>${esc(accountLabel(accountOf(d, k)))}</option>`).join("");
+  return `<div class="chips wrap rb-filters" role="group" aria-label="Фильтр по состоянию">${chips}</div>
+    <div class="rb-fsel">
+      <select class="rb-sel" data-act-change="rb-filter-project" aria-label="Канал"><option value="">Все каналы</option>${pOpts}</select>
+      ${keys.length ? `<select class="rb-sel" data-act-change="rb-filter-account" aria-label="Аккаунт Claude"><option value="">Все аккаунты</option>${aOpts}<option value="none" ${f.account === "none" ? "selected" : ""}>Без аккаунта</option></select>` : ""}
+      <button class="chip ${ui.robot.expandAll ? "on" : ""}" data-act="rb-expand-all" aria-pressed="${!!ui.robot.expandAll}">${icon(ui.robot.expandAll ? "chevron-down" : "chevron-right")}Подробно</button>
+    </div>`;
+}
+
 // ---------- экран ----------
 export function view() {
   const r = ui.robot;
@@ -325,13 +397,22 @@ export function view() {
       <button class="btn ghost sm" data-act="rb-goto" data-to="setup">${icon("check-circle")}Настройка по проектам${red ? ` <span class="badge late">${red}</span>` : ""}</button></div></div>`;
 
   html += `<h2>Выпуски</h2>`;
+  const f = filterOf();
+  const { list, counts } = robotFilterEpisodes(eps, f);
+  const filtered = f.status !== "all" || f.project != null || f.account != null;
   if (!enabled.length) html += `<div class="card empty">Робот не включён ни в одном проекте.<br>Включи его переключателем в списке проектов.</div>`;
   else if (!eps.length) html += `<div class="card empty">Выпусков у робота нет — календарь заведёт за 4 дня до выхода.</div>`;
-  else html += `<div class="rb-list">${eps.map((e) => robotEpisode(e, nowMs, true, d)).join("")}</div>`;
+  else {
+    html += filterBar(d, eps, f, counts);
+    html += list.length
+      ? `<div class="rb-list">${list.map((e) => robotEpisode(e, nowMs, true, d)).join("")}</div>`
+      : `<div class="card empty">Под фильтр ничего не попало.<br><br><button class="btn sm" data-act="rb-filter-reset">Показать все</button></div>`;
+  }
+  const doneShown = robotFilterEpisodes(doneEps, { project: f.project, account: f.account }).list;
 
-  if (doneEps.length) {
-    html += `<div class="chips mt-2"><button class="chip ${r.showDone ? "on" : ""}" data-act="robot-done">${icon(r.showDone ? "chevron-down" : "chevron-right")}Готовые · ${doneEps.length}</button></div>`;
-    if (r.showDone) html += `<div class="muted small note-line">Уже на YouTube (хотя бы на одном языке), за неделю. Старые — на вкладке «Выпуски», раздел «Готовые».</div><div class="rb-list">${doneEps.map((e) => robotEpisode(e, nowMs, false, d)).join("")}</div>`;
+  if (doneEps.length && (!filtered || doneShown.length)) {
+    html += `<div class="chips mt-2"><button class="chip ${r.showDone ? "on" : ""}" data-act="robot-done">${icon(r.showDone ? "chevron-down" : "chevron-right")}Готовые · ${doneShown.length}</button></div>`;
+    if (r.showDone) html += `<div class="muted small note-line">Уже на YouTube (хотя бы на одном языке), за неделю. Старые — на вкладке «Выпуски», раздел «Готовые».</div><div class="rb-list">${doneShown.map((e) => robotEpisode(e, nowMs, false, d)).join("")}</div>`;
   } else if (enabled.length) html += `<div class="muted small note-line">Готовых за неделю пока нет.</div>`;
   html += `</div><aside class="rb-aside">`;
 
@@ -357,6 +438,30 @@ export function refresh() { ui.robot.error = null; return loadRobot(); }
 export const actions = {
   "robot-refresh": () => refresh(),
   "robot-done": () => { ui.robot.showDone = !ui.robot.showDone; render(); },
+  "rb-filter": (el) => setFilter({ status: el.dataset.status }),
+  "change:rb-filter-project": (el) => setFilter({ project: el.value ? Number(el.value) : null }),
+  "change:rb-filter-account": (el) => setFilter({ account: el.value || null }),
+  "rb-filter-reset": () => setFilter({ status: "all", project: null, account: null }),
+  // карточка свёрнута до шапки, «где сейчас» и аккаунта; «Подробно» раскрывает все
+  "rb-open": (el) => {
+    const id = Number(el.dataset.id), d = ui.robot.data || {};
+    const open = ui.robot.open || (ui.robot.open = new Set());
+    if (ui.robot.expandAll) {
+      ui.robot.expandAll = false;
+      for (const e of [...(d.episodes || []), ...(d.done || [])]) open.add(e.id);
+    }
+    if (!open.delete(id)) open.add(id);
+    render();
+  },
+  "rb-expand-all": () => {
+    ui.robot.expandAll = !ui.robot.expandAll;
+    if (!ui.robot.expandAll && ui.robot.open) ui.robot.open.clear();
+    render();
+  },
+  "change:rb-account": (el) => {
+    const v = el.value || null;
+    robotAct("robot.account", { episode_id: Number(el.dataset.ep), account: v }, v ? `Выпуск закреплён за аккаунтом ${accountLabel(accountOf(ui.robot.data, v))}` : "Аккаунт — как выберет машина", el);
+  },
   "rb-goto": (el) => go({ tab: el.dataset.to }),
   "rb-review": (el) => go({ tab: "review", run: Number(el.dataset.run) }, { closeSheets: true }),
   "rb-manage": (el) => openManage(Number(el.dataset.id)),
