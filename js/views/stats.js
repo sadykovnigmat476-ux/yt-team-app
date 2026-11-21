@@ -8,9 +8,10 @@ import { emptyBlock, fullscreenChip, projectChips } from "../ui/parts.js?v=d9685
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { table } from "../ui/table.js?v=66cd030b";
 
-/** Подпись канала: своё имя, если задано, иначе «Аксиома RU» — проект и язык. */
-function chName(channelId, lang) {
+/** Подпись канала: своё имя, если задано, иначе «Аксиома RU» — проект и язык. Второй канал языка в S.channels нет — имя из ответа. */
+function chName(channelId, lang, name) {
   const c = chan(channelId);
+  if (name) return name;
   if (c && c.name) return c.name;
   const p = c && proj(c.project_id);
   return `${p ? p.name : ""} ${String(lang || (c && c.lang) || "").toUpperCase()}`.trim();
@@ -104,7 +105,9 @@ function statsLangs(d) {
       : "У каналов нет ссылок на YouTube — добавь их в настройках проекта."}</div>`;
   }
   for (const p of projects) {
-    const cs = d.channels.filter((c) => c.project_id === p.id).sort((a, b) => ((chan(a.channel_id) || {}).sort ?? 0) - ((chan(b.channel_id) || {}).sort ?? 0));
+    // вторые каналы языка (extra) — сразу за основным каналом того же языка
+    const order = (c) => (chan(c.channel_id) || {}).sort ?? (d.channels.find((m) => !m.extra && m.project_id === c.project_id && m.lang === c.lang) || c).sort ?? 0;
+    const cs = d.channels.filter((c) => c.project_id === p.id).sort((a, b) => order(a) - order(b) || (a.extra ? 1 : 0) - (b.extra ? 1 : 0) || (a.sort ?? 0) - (b.sort ?? 0) || a.channel_id - b.channel_id);
     const hasDelta = cs.some((c) => c.viewsDelta != null);
     // пока нет истории снимков — всего просмотров канала; потом — прирост за период
     const val = (c) => (hasDelta ? c.viewsDelta : c.totalViews);
@@ -125,7 +128,7 @@ function statsLangs(d) {
           hasDelta && c.totalViews != null ? `всего ${fmtNum(c.totalViews)}` : "",
           c.median != null ? `<span title="${c.medianKind === "d7" ? "медиана просмотров на 7-й день" : "медиана просмотров роликов старше недели"}">ролик ≈ ${fmtNum(c.median)}</span>` : "",
           c.videosInPeriod ? `новых: ${c.videosInPeriod}` : ""].filter(Boolean).join(" · ");
-        const name = chName(c.channel_id, c.lang);
+        const name = chName(c.channel_id, c.lang, c.name);
         return `<div class="bar-row" title="${esc(name)}: ${txt}">
           <span class="ellipsis">${esc(name)}</span><span class="num">${txt}</span>
           <div class="bar">${v == null ? "" : `<b style="width:${w}%"></b>`}</div></div>

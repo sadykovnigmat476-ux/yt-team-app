@@ -23,7 +23,7 @@ import * as robot from "./views/robot.js?v=f243608e";
 import * as robot_settings from "./views/robot_settings.js?v=2518b325";
 import * as settings from "./views/settings.js?v=04c08d8c";
 import * as setup from "./views/setup.js?v=bf726e66";
-import * as stats from "./views/stats.js?v=160aa46e";
+import * as stats from "./views/stats.js?v=89a06cd0";
 
 const VIEWS = { now, episodes, calendar, stats, settings, robot, review, robot_settings, setup, login };
 const ctx = { get S() { return S; }, ui, go, act, api };

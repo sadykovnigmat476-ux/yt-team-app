@@ -875,8 +875,14 @@
         const k = b.days / 30;
         const pids = b.project_id ? [b.project_id] : st.projects.map((p) => p.id);
         const base = { ru: 12000, en: 8100, de: 900, pl: 300, es: 4000 };
-        const channels = st.channels.filter((c) => pids.includes(c.project_id)).map((c) => ({
+        // вторые каналы языка (stat_channels) — только в статистике: у Физики RU 5 и EN 1
+        const extras = [
+          { id: 901, project_id: 1, lang: "ru", name: "Скрытая физика RU 5", sort: 0, extra: true },
+          { id: 902, project_id: 1, lang: "en", name: "Скрытая физика EN 1", sort: 1, extra: true },
+        ];
+        const channels = [...st.channels, ...extras].filter((c) => pids.includes(c.project_id)).map((c) => ({
           channel_id: c.id, project_id: c.project_id, lang: c.lang,
+          name: c.extra ? c.name : null, extra: !!c.extra, tag: c.extra ? c.name.split(" ").pop() : "", sort: c.sort ?? 0,
           subscribers: Math.round(base[c.lang] * 3 / c.project_id), totalViews: base[c.lang] * 40,
           // у третьего проекта истории ещё нет — видна медиана ролика вместо прироста
           subsDelta: c.project_id === 3 ? null : Math.round(base[c.lang] / 100 * k), viewsDelta: c.project_id === 3 ? null : Math.round(base[c.lang] * k / c.project_id),
