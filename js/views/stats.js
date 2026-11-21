@@ -144,7 +144,7 @@ function statsEpisodes(d) {
     const p = proj(e.project_id) || { emoji: "" };
     return `<div class="ep-views" data-key="sev-${e.episode_id}"><div class="row"><div class="grow ellipsis"><b>${esc(e.code)}</b> ${esc(e.title)}</div><span class="num"><b>${fmtNum(e.total)}</b></span></div>
       <div class="muted small">${esc(p.emoji)} вышел ${e.published ? fmt(e.published.slice(0, 10)) : "—"}</div>
-      <div class="chips">${e.langs.map((l) => `<a class="chip" href="https://youtu.be/${esc(l.video_id)}" data-act="open-link" title="${l.d7 != null ? `за 7 дней: ${fmtNum(l.d7)}` : ""}">${esc(langTag(l.lang))} <span class="num">${fmtNum(l.views)}</span>${l.d7 != null ? `<span class="muted small num">7 дн. ${fmtNum(l.d7)}</span>` : ""}</a>`).join("")}</div></div>`;
+      <div class="chips">${e.langs.map((l) => `<a class="chip" href="https://youtu.be/${esc(l.video_id)}" data-act="open-link" title="${l.d7 != null ? `за 7 дней: ${fmtNum(l.d7)}` : ""}">${esc(langTag(l.lang))}${l.tag ? ` ${esc(l.tag)}` : ""} <span class="num">${fmtNum(l.views)}</span>${l.d7 != null ? `<span class="muted small num">7 дн. ${fmtNum(l.d7)}</span>` : ""}</a>`).join("")}</div></div>`;
   }).join("")}</div>`;
 }
 

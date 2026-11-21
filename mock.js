@@ -891,7 +891,9 @@
         }));
         const ep = (id, code, title, pid, d, mult) => ({
           episode_id: id, project_id: pid, code, title, published: add(today, -d) + "T10:00:00Z",
-          langs: langs.map((l, i) => ({ lang: l, video_id: "dQw4w9WgXcQ", views: Math.round(base[l] * mult), d7: d >= 7 ? Math.round(base[l] * mult * 0.7) : null })),
+          langs: [...langs.map((l) => ({ lang: l, tag: "", video_id: "dQw4w9WgXcQ", views: Math.round(base[l] * mult), d7: d >= 7 ? Math.round(base[l] * mult * 0.7) : null })),
+            // у Физики — ещё ролик на втором канале языка (RU 5)
+            ...(pid === 1 ? [{ lang: "ru", tag: "5", video_id: "dQw4w9WgXcQ", views: Math.round(base.ru * mult / 3), d7: null }] : [])],
           total: 0,
         });
         const episodes = [ep(4, "S04", "Ньютон и яблоко: что было на самом деле", 1, 2, 0.4), ep(90, "S03", "Почему небо синее, а закат красный", 1, 9, 1.1), ep(91, "11", "Every Weird Fractal", 3, 15, 0.8)]
