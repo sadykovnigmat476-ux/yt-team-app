@@ -1,16 +1,16 @@
 // «Выпуски»: поиск, фильтры, доска и список; вопросы бота по папкам Диска.
-import { api } from "../core/api.js?v=3e4d8fc3";
-import { agoText, daysBetween, epColumn, esc, fmt, META, outToday, STAGES } from "../core/logic.js?v=ece754bc";
-import { currentRoute, go } from "../core/router.js?v=65625d97";
-import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=67a6fbcd";
+import { api } from "../core/api.js?v=e83a22ea";
+import { agoText, daysBetween, epColumn, esc, fmt, META, missedExit, outToday, STAGES } from "../core/logic.js?v=0340b73a";
+import { currentRoute, go } from "../core/router.js?v=e224d3d7";
+import { act, epHead, episodeDone, mem, pc, proj, rel, render, S, stageInfo, store, ui } from "../core/store.js?v=aad1f61d";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead, stageBadge } from "../ui/parts.js?v=d9685a9c";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=3b5139f6";
+import { emptyBlock, epHtml, initial, isManaged, onboarding, progressBars, projectChips, sheetHead, stageBadge } from "../ui/parts.js?v=42291787";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=89730db9";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 // ---------- поиск и фильтры ----------
-const F = { q: "", stage: "", person: "", late: false, today: false };
-const filtersOn = () => !!(F.q.trim() || F.stage || F.person || F.late || F.today || ui.project !== "all");
+const F = { q: "", stage: "", person: "", late: false, today: false, missed: false };
+const filtersOn = () => !!(F.q.trim() || F.stage || F.person || F.late || F.today || F.missed || ui.project !== "all");
 
 const COLS = [...STAGES.map((id) => ({ id, i: META[id].i, n: META[id].n })), { id: "done", i: "check-circle", n: "Вышло" }];
 
@@ -18,6 +18,10 @@ const isToday = (e) => outToday(S, e);
 /** Плашка «Сегодня до ЧЧ:00»: час срока — из настроек робота, если экран «Робот» их уже загрузил, иначе 22 (значение по умолчанию). */
 const todayPill = () => `<span class="badge out-today">${icon("clock")}Сегодня до ${ui.robot?.data?.limits?.deadline_hour ?? 22}:00</span>`;
 const isLate = (e) => !episodeDone(e.id) && STAGES.some((st) => stageInfo(e.id, st).late);
+/** Не вышел в срок (ADR 0028): дней опоздания или null — красная плашка на карточке. */
+const missedOf = (e) => missedExit(e.publish_date, S.tasks.filter((t) => t.episode_id === e.id && t.stage === "upload"), S.today);
+const missedBadge = (n) => `<span class="badge late missed">${icon("alert")}не вышел · ${n} дн.</span>`;
+const missedCount = () => S.episodes.filter((e) => missedOf(e) != null).length;
 
 /** Подходит ли выпуск под запрос и фильтры. Запрос — слова через пробел, каждое ищется в коде, названии и проекте. */
 function matches(e) {
@@ -25,6 +29,7 @@ function matches(e) {
   if (F.stage && epColumn(S, e.id) !== F.stage) return false;
   if (F.late && !isLate(e)) return false;
   if (F.today && !isToday(e)) return false;
+  if (F.missed && missedOf(e) == null) return false;
   if (F.person && !S.tasks.some((t) => t.episode_id === e.id && !t.done_at && String(t.assignee_id) === F.person)) return false;
   const words = F.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return true;
@@ -42,6 +47,7 @@ function filterText() {
   if (F.person) parts.push(`человек ${esc((mem(Number(F.person)) || { name: "?" }).name)}`);
   if (F.late) parts.push("только просроченные");
   if (F.today) parts.push("только сегодняшние");
+  if (F.missed) parts.push("только не вышедшие в срок");
   return parts.join(", ");
 }
 
@@ -62,6 +68,7 @@ function toolbar(total, shown) {
       <select class="inp sel" id="ep-person" data-act-change="ep-person" aria-label="Фильтр по человеку">${personOpts}</select>
       <button class="chip ${F.today ? "on" : ""}" data-act="ep-today" aria-pressed="${F.today}" title="Выпуски, которые выходят сегодня">${icon("clock")}Сегодня${todayCount() ? ` · ${todayCount()}` : ""}</button>
       <button class="chip ${F.late ? "on" : ""}" data-act="ep-late" aria-pressed="${F.late}">${icon("alert")}Просрочено</button>
+      ${missedCount() || F.missed ? `<button class="chip missed ${F.missed ? "on" : ""}" data-act="ep-missed" aria-pressed="${F.missed}" title="Дата выхода прошла, а выложен не на всех языках">${icon("alert")}Не вышли · ${missedCount()}</button>` : ""}
       ${filtersOn() ? `<button class="chip" data-act="ep-reset">${icon("x")}Сбросить</button>` : ""}
       <span class="muted small count" data-key="ep-count">${filtersOn() ? `Найдено ${shown} из ${total}` : `Выпусков: ${total}`}</span>
     </div></div>`;
@@ -72,8 +79,9 @@ function episodeRow(e) {
   const p = proj(e.project_id);
   const done = episodeDone(e.id);
   const anyLate = isLate(e);
-  const badge = done ? `<span class="badge ok">готово</span>` : `<span class="badge ${anyLate ? "late" : daysBetween(S.today, e.publish_date) <= 0 ? "today" : ""}">${fmt(e.publish_date)}</span>`;
-  return `<div class="card clickable pc-stripe" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
+  const missed = missedOf(e);
+  const badge = done ? `<span class="badge ok">готово</span>` : missed != null ? missedBadge(missed) : `<span class="badge ${anyLate ? "late" : daysBetween(S.today, e.publish_date) <= 0 ? "today" : ""}">${fmt(e.publish_date)}</span>`;
+  return `<div class="card clickable pc-stripe${missed != null ? " missed" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
     <div class="row"><div class="grow"><div class="ellipsis">${epHtml(e)}</div>
     <div class="muted ellipsis">выход ${fmt(e.publish_date, true)} · ${rel(e.publish_date)}${isManaged(e) ? " · ведёт робот" : ""}</div></div>${badge}</div>
     ${progressBars(e.id)}
@@ -91,7 +99,10 @@ function kanbanCardDense(e, col) {
       + (!i.active ? `<span title="ждёт предыдущий этап">${icon("hourglass")}</span>` : "")
       + (i.active ? stageBadge(i) : `<span class="badge">${fmt(e.publish_date)}</span>`);
   }
-  return `<div class="kcard dense${isToday(e) ? " out-today" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}" title="${isToday(e) ? "Выходит сегодня · " : ""}${esc(e.title)}">
+  const missed = missedOf(e);
+  // в компактной карточке места мало: код выпуска важнее слов, «не вышел» — в подсказке и красном фоне
+  if (missed != null) meta = `<span class="badge late missed" title="Не вышел в срок">${icon("alert")}${missed} дн.</span>`;
+  return `<div class="kcard dense${isToday(e) ? " out-today" : ""}${missed != null ? " missed" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}" title="${isToday(e) ? "Выходит сегодня · " : ""}${esc(e.title)}">
     <div class="kh"><span class="muted small ellipsis"><b>${esc(`${p ? p.emoji : ""} ${e.code}`.trim())}</b>${isManaged(e) ? ` <span title="Выпуск ведёт робот">${icon("robot")}</span>` : ""} ${esc(p ? p.name : "")}</span><span class="mt">${meta}</span></div>
     <div class="tt">${esc(e.title)}</div></div>`;
 }
@@ -109,9 +120,10 @@ function kanbanCard(e, col) {
       + (!i.active ? `<span title="ждёт предыдущий этап">${icon("hourglass")}</span>` : "")
       + `<span class="to-end">${i.active ? stageBadge(i) : `<span class="badge">выход ${fmt(e.publish_date)}</span>`}</span>`;
   }
-  return `<div class="kcard${isToday(e) ? " out-today" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
+  const missed = missedOf(e);
+  return `<div class="kcard${isToday(e) ? " out-today" : ""}${missed != null ? " missed" : ""}" style="${pc(p)}" data-act="open-episode" data-id="${e.id}">
     <div class="muted small ellipsis"><b>${esc(epHead(e))}</b>${isManaged(e) ? ` <span title="Выпуск ведёт робот">${icon("robot")}</span>` : ""}</div>
-    <div class="tt">${esc(e.title)}</div>${isToday(e) ? `<div class="today-line">${todayPill()}</div>` : ""}<div class="mt">${meta}</div></div>`;
+    <div class="tt">${esc(e.title)}</div>${isToday(e) ? `<div class="today-line">${todayPill()}</div>` : ""}${missed != null ? `<div class="today-line">${missedBadge(missed)}</div>` : ""}<div class="mt">${meta}</div></div>`;
 }
 
 // ---------- вопросы бота по папкам ----------
@@ -242,8 +254,9 @@ export const actions = {
   "change:ep-person": (el) => { F.person = el.value; render(); },
   "ep-late": () => { F.late = !F.late; render(); },
   "ep-today": () => { F.today = !F.today; render(); },
+  "ep-missed": () => { F.missed = !F.missed; render(); },
   "ep-reset": () => {
-    Object.assign(F, { q: "", stage: "", person: "", late: false, today: false });
+    Object.assign(F, { q: "", stage: "", person: "", late: false, today: false, missed: false });
     ui.project = "all";
     store("project", "all");
     // поля, которые человек правил, морф не перезаписывает: сбрасываем руками

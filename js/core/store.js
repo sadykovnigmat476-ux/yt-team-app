@@ -1,8 +1,9 @@
 // Состояние приложения: S — последний ответ state, ui — выбор на экране. Отсюда же запросы-изменения.
-import { api } from "./api.js?v=3e4d8fc3";
-import * as L from "./logic.js?v=ece754bc";
-import { haptic, nativeProgress } from "./tg.js?v=06b152bb";
+import { api } from "./api.js?v=e83a22ea";
+import * as L from "./logic.js?v=0340b73a";
+import { haptic, nativeProgress } from "./tg.js?v=ab5bd537";
 import { clearError, showError, toast } from "../ui/toast.js?v=c026fd86";
+import { confirmBox } from "../ui/confirm.js?v=10859c26";
 
 export let S = null;
 
@@ -95,6 +96,18 @@ function setBusyUI(on, el) {
  * Возвращает ответ ({} если пустой) или null при ошибке/отброшенном повторе.
  */
 export async function act(action, body, msg, opts = {}) {
+  const r = await actOnce(action, body, msg, opts);
+  if (r !== OFF_DAY) return r;
+  // чужой день выхода (ADR 0028): владельцу — вопрос; «да» — тот же запрос с off_day, сервер примет только от владельца
+  const ok = await confirmBox(`${OFF_DAY.text}\n\nПоставить всё равно?`, { ok: "Да, на чужой день", cancel: "Нет" });
+  if (!ok) return null;
+  return actOnce(action, { ...body, off_day: true }, msg, opts);
+}
+
+/** Ответ actOnce: сервер отказал из-за чужого дня, а спросить можно (владелец). text — причина от сервера. */
+const OFF_DAY = { text: "" };
+
+async function actOnce(action, body, msg, opts = {}) {
   const key = action + ":" + JSON.stringify(body);
   while (busy) {
     if (busy.key === key) return null;
@@ -114,6 +127,10 @@ export async function act(action, body, msg, opts = {}) {
     return r || {};
   } catch (e) {
     haptic("error");
+    if (e.offDay && S && S.me && S.me.is_owner && !body.off_day) {
+      OFF_DAY.text = e.message;
+      return OFF_DAY;
+    }
     failed = e;
     return null;
   } finally {

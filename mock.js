@@ -97,6 +97,18 @@
   let orphans = [{ project_id: 1, id: "orphan-faraday", name: "Фарадей и первый электромотор" }];
 
   /** raw — как у выпусков, созданных давно: сроки по оффсетам без сжатия (демо-просрочка). */
+  // чужой день выхода (ADR 0028): отказ с off_day, владелец повторяет с off_day: true; дни — из демо-проекта
+  function offDayGuard(p, date, b) {
+    if (!p || !p.publish_days || !date || (b && b.off_day && st.me.is_owner)) return;
+    const even = Number(date.slice(8, 10)) % 2 === 0;
+    if (even === (p.publish_days === "even")) return;
+    const dd = date.slice(8, 10) + "." + date.slice(5, 7);
+    const err = new Error(dd + " — " + (even ? "чётное" : "нечётное") + " число. Дни выхода «" + p.name + "» — " + (p.publish_days === "even" ? "чётные" : "нечётные") + ". Поставить на чужой день может только владелец.");
+    err.status = 409;
+    err.offDay = true;
+    throw err;
+  }
+
   function createEpisode(b, raw) {
     // ключ запроса формы: повтор «Создать» после «Нет связи» — тот же выпуск, без новых задач
     const dup = b.request_id && st.episodes.find((x) => x.client_request_id === b.request_id);
@@ -620,6 +632,7 @@
     const title = String(b.title || "").trim();
     if (!title) throw new Error("Напиши тему");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(b.publish_date || "")) throw new Error("Неверная дата");
+    offDayGuard(proj(b.project_id), b.publish_date, b);
     if (plan.some((r) => r.id !== b.id && r.project_id === b.project_id && r.publish_date === b.publish_date && r.title === title)) throw new Error("Такая тема на эту дату уже есть");
     if (b.id) {
       const r = plan.find((x) => x.id === b.id && x.status === "planned");
@@ -794,7 +807,7 @@
           ...(folder ? { folder: { id: folder.id, name: folder.name } } : {}), compressed: isCompressed(p, pub),
         };
       }
-      case "episode.create": return { id: createEpisode(b).id };
+      case "episode.create": offDayGuard(proj(b.project_id), b.publish_date, b); return { id: createEpisode(b).id };
       case "episode.update": {
         const e = st.episodes.find((x) => x.id === b.id);
         if (b.code != null) { const code = normCode(b.code); assertCodeFree(proj(e.project_id), code, e.id); e.code = code; }
@@ -802,7 +815,7 @@
         if (b.notes != null) e.notes = b.notes;
         if (b.publish_date != null) {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(b.publish_date)) throw new Error("Неверная дата");
-          if (b.publish_date !== e.publish_date) reschedule(e, b.publish_date);
+          if (b.publish_date !== e.publish_date) { offDayGuard(proj(e.project_id), b.publish_date, b); reschedule(e, b.publish_date); }
         }
         return {};
       }
@@ -821,6 +834,11 @@
       }
       case "tasks.assign": {
         const ts = st.tasks.filter((t) => b.ids.includes(t.id));
+        if (b.due_date) for (const t of ts.filter((x) => x.stage === "upload")) {
+          const e = st.episodes.find((x) => x.id === t.episode_id), p = proj(e.project_id);
+          const to = add(b.due_date, p.upload_offset);
+          if (to !== e.publish_date) offDayGuard(p, to, b);
+        }
         ts.forEach((t) => { if ("assignee_id" in b) t.assignee_id = b.assignee_id; if ("due_date" in b) t.due_date = b.due_date; });
         // срок «Выкладки» = дата выхода: двигаем выпуск общим путём, остальные открытые этапы пересчитываются
         if (b.due_date) {

@@ -1,15 +1,15 @@
 // Выпуск: панель с этапами, матрицей языков, озвучкой, ходом монтажа, ссылками и заметками; форма нового выпуска.
-import { api } from "../core/api.js?v=3e4d8fc3";
+import { api } from "../core/api.js?v=e83a22ea";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=ece754bc";
-import { go } from "../core/router.js?v=65625d97";
-import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=67a6fbcd";
-import { haptic, openUrl } from "../core/tg.js?v=06b152bb";
-import { confirmBox } from "../ui/confirm.js?v=0b374d0b";
+import { agoText, closedByBot, esc, fmt, folderLink, langReady, langTag, materialCell, MATERIALS, META, missedExit, publishDaysNote, STAGES, voiceHint, youtubeByLang } from "../core/logic.js?v=0340b73a";
+import { go } from "../core/router.js?v=e224d3d7";
+import { act, ep, epBtn, epHead, epLabel, epTasks, isActive, isCompressedFor, markDone, mem, nextCode, pc, proj, render, S, stageInfo, ui, chan } from "../core/store.js?v=aad1f61d";
+import { haptic, openUrl } from "../core/tg.js?v=ab5bd537";
+import { confirmBox } from "../ui/confirm.js?v=10859c26";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=d9685a9c";
-import { questionBlock } from "../ui/question.js?v=c8f984d0";
-import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=3b5139f6";
+import { closeLocked, isManaged, LOCK_TEXT, memberOptions, progressBars, sheetHead } from "../ui/parts.js?v=42291787";
+import { questionBlock } from "../ui/question.js?v=ff68a3bd";
+import { canLeave, closeSheet, openEpisodeId, openSheet } from "../ui/sheet.js?v=89730db9";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
 /** Для шторки выпуска: «готово» по моему открытому этапу и папка. */
@@ -31,7 +31,19 @@ function episodeNative(id) {
 /** Напоминание о днях выхода: обычная строка, если дата подходит, и предупреждение, если нет. */
 function publishNote(p, date) {
   const n = publishDaysNote(p, date);
-  return n ? `<div class="note${n.fits ? "" : " warn"}">${esc(n.text)}</div>` : "";
+  if (!n) return "";
+  // чужой день — жёсткое правило (ADR 0028): сохранит только владелец, подтвердив
+  const rule = n.fits ? "" : S.me.is_owner ? " Сохранить можно только с подтверждением." : " Поставить на чужой день может только владелец.";
+  return `<div class="note${n.fits ? "" : " warn"}">${esc(n.text + rule)}</div>`;
+}
+
+/** Красная строка «не вышел в срок» над карточкой выпуска: дата прошла, языки без выкладки. */
+function missedNote(e) {
+  const ups = epTasks(e.id).filter((t) => t.stage === "upload");
+  const n = missedExit(e.publish_date, ups, S.today);
+  if (n == null) return "";
+  const langs = ups.filter((t) => !t.done_at).map((t) => (chan(t.channel_id) || { lang: "?" }).lang.toUpperCase());
+  return `<div class="note missed-note">${icon("alert")}<span><b>Не вышел в срок</b> — выход был ${fmt(e.publish_date)}, опоздание ${n} дн.${langs.length ? ` Не выложено: ${esc(langs.join(", "))}.` : ""}</span></div>`;
 }
 
 function compressNote(p, date) {
@@ -245,6 +257,7 @@ function episodeSheet(id) {
     const managed = isManaged(e);
     const released = e.publish_date <= S.today;
     let html = `${sheetHead(epHead(e), pc(p))}
+      ${missedNote(e)}
       ${progressBars(e.id)}
       ${questionsSection(id)}
       ${managed ? `<div class="note robot-note">${icon("robot")}<span>Выпуск ведёт робот: этапы до выкладки закрывают файлы на Диске${S.me.is_owner ? " или ты" : " или владелец"}. Выкладка — как раньше, у Павла.</span>${S.me.is_owner ? `<button class="btn ghost sm" data-act="to-robot">Пульт</button>` : ""}</div>` : ""}

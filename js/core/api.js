@@ -1,6 +1,6 @@
 // Транспорт к серверу. На моке вместо сети — window.MOCK_API: тот же контракт action/body.
-import { authHeaders } from "./session.js?v=3e4d8fc3";
-import { MOCK } from "./tg.js?v=06b152bb";
+import { authHeaders } from "./session.js?v=e83a22ea";
+import { MOCK } from "./tg.js?v=ab5bd537";
 
 const API_URL = (window.APP_CONFIG && window.APP_CONFIG.apiUrl) || "";
 const FETCH_TIMEOUT_MS = 20000;
@@ -27,7 +27,12 @@ async function rawFetch(url, action, body, timeoutMs = FETCH_TIMEOUT_MS) {
     clearTimeout(timer);
   }
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw apiError(json.error || `Сервер ответил ошибкой ${res.status}, попробуй ещё раз`, res.status, res.status >= 500);
+  if (!res.ok) {
+    const err = apiError(json.error || `Сервер ответил ошибкой ${res.status}, попробуй ещё раз`, res.status, res.status >= 500);
+    // чужой день выхода (ADR 0028): владелец может подтвердить и повторить с off_day
+    if (json.off_day) err.offDay = true;
+    throw err;
+  }
   return json;
 }
 

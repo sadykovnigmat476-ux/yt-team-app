@@ -141,7 +141,7 @@ textarea.inp { resize: vertical; min-height: 72px; padding: var(--sp-2); display
 /* Вопрос-подтверждение */
 .confirm { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: var(--sp-4); background: var(--scrim); }
 .confirm-box { width: min(400px, 100%); background: var(--surface); border-radius: var(--radius-lg); padding: var(--sp-4); box-shadow: var(--shadow); }
-.confirm-box p { margin-bottom: var(--sp-4); }
+.confirm-box p { margin-bottom: var(--sp-4); white-space: pre-line; }
 .confirm-acts { display: flex; justify-content: flex-end; gap: var(--sp-2); }
 
 /* Меню «Ещё» на телефоне */

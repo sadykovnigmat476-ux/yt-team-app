@@ -258,23 +258,50 @@ export function epBtn(S, e) {
 }
 /** Сжатый график: срок сценария уже в прошлом (зеркало isCompressed на сервере). */
 export const isCompressedFor = (S, p, publishDate) => !!publishDate && addDays(publishDate, -(p.script_offset || 0)) < S.today;
+/** Дни выхода каналов — жёсткое правило владельца 2026-11-25 (зеркало PUBLISH_DAYS в domain.ts, ADR 0028). */
+export const PUBLISH_DAYS = Object.freeze({
+  3: "even", 2: "even", 8: "even", 7: "even", 10: "even", 23: "even", 24: "even", 25: "even", 12: "even", 15: "even",
+  16: "even", 18: "even", 29: "even", 30: "even",
+  1: "odd", 5: "odd", 9: "odd", 6: "odd", 11: "odd", 13: "odd", 14: "odd", 17: "odd", 19: "odd", 20: "odd", 28: "odd",
+  26: "odd",
+  27: "pause",
+});
+/** Дни выхода проекта: список владельца, иначе база; null — любой день (зеркало publishDaysOf). */
+export function publishDaysOf(p) {
+  if (!p) return null;
+  return (p.id != null ? PUBLISH_DAYS[p.id] : undefined) || p.publish_days || null;
+}
 /** Дата годится под дни выхода проекта (зеркало publishDayFits на сервере). */
 export function publishDayFits(p, date) {
-  if (!p || !p.publish_days) return true;
-  return (Number(date.slice(8, 10)) % 2 === 0) === (p.publish_days === "even");
+  const days = publishDaysOf(p);
+  if (!days) return true;
+  if (days === "pause") return false;
+  return (Number(date.slice(8, 10)) % 2 === 0) === (days === "even");
 }
 export function nextPublishDay(p, from) {
+  if (publishDaysOf(p) === "pause") return from;
   let d = from;
   while (!publishDayFits(p, d)) d = addDays(d, 1);
   return d;
 }
 /** Напоминание о днях выхода (зеркало publishDaysNote на сервере). */
 export function publishDaysNote(p, date) {
-  if (!p || !p.publish_days) return null;
-  const days = p.publish_days === "even" ? "чётные" : "нечётные";
+  const d = publishDaysOf(p);
+  if (!d) return null;
+  if (d === "pause") return { fits: false, text: `«${p.name}» на паузе — новые выпуски не выходят.` };
+  const days = d === "even" ? "чётные" : "нечётные";
   if (!date || publishDayFits(p, date)) return { fits: true, text: `Дни выхода «${p.name}» — ${days} числа.` };
-  const other = p.publish_days === "even" ? "нечётное" : "чётное";
+  const other = d === "even" ? "нечётное" : "чётное";
   return { fits: false, text: `${fmt(date)} — ${other} число. Дни выхода «${p.name}» — ${days}, ближайшая подходящая дата: ${fmt(nextPublishDay(p, date))}.` };
+}
+/**
+ * Не вышел в срок (зеркало missedExit): дата выхода прошла, выложен не на всех языках; дней опоздания или null.
+ * Старше back дней — забытая запись, не тревога.
+ */
+export function missedExit(publishDate, uploads, today, back = 14) {
+  if (!publishDate || publishDate >= today || publishDate < addDays(today, -back)) return null;
+  if (!uploads.length || uploads.every((t) => t.done_at)) return null;
+  return daysBetween(publishDate, today);
 }
 export const projChannels = (S, pid) => S.channels.filter((c) => c.project_id === pid).sort((a, b) => a.sort - b.sort);
 const chSort = (S, t) => (chanOf(S, t.channel_id) || { sort: -1 }).sort;

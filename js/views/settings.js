@@ -1,15 +1,15 @@
 // «Настройки»: команда, проекты, Диск, напоминания; форма проекта.
-import { api } from "../core/api.js?v=3e4d8fc3";
+import { api } from "../core/api.js?v=e83a22ea";
 import { byId, kp } from "../core/dom.js?v=3f6425ae";
-import { esc, KINDS, langTag, META, PALETTE, projectFormError, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=ece754bc";
-import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=67a6fbcd";
-import { go } from "../core/router.js?v=65625d97";
-import * as session from "../core/session.js?v=3e4d8fc3";
-import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=06b152bb";
-import { confirmBox } from "../ui/confirm.js?v=0b374d0b";
+import { esc, KINDS, langTag, META, PALETTE, projectFormError, PUBLISH_DAYS, REQUIRED_MATERIALS, requiredValue, STAGES } from "../core/logic.js?v=0340b73a";
+import { act, mem, pc, pcolor, proj, projChannels, S, store, topicBound, ui } from "../core/store.js?v=aad1f61d";
+import { go } from "../core/router.js?v=e224d3d7";
+import * as session from "../core/session.js?v=e83a22ea";
+import { canFullscreen, haptic, inTelegram, tg } from "../core/tg.js?v=ab5bd537";
+import { confirmBox } from "../ui/confirm.js?v=10859c26";
 import { icon } from "../ui/icons.js?v=2008de79";
-import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=d9685a9c";
-import { closeSheet, openSheet } from "../ui/sheet.js?v=3b5139f6";
+import { emptyBlock, memberOptions, onboarding, sheetHead } from "../ui/parts.js?v=42291787";
+import { closeSheet, openSheet } from "../ui/sheet.js?v=89730db9";
 import { skeleton } from "../ui/skeleton.js?v=72d04fb7";
 import { toast } from "../ui/toast.js?v=c026fd86";
 
@@ -31,6 +31,17 @@ function memberActions(m) {
   if (!admin || me) return rename;
   return `${rename}<button class="btn ghost sm" data-act="member-admin" data-id="${m.tg_id}" data-on="${m.is_admin ? 0 : 1}">${m.is_admin ? "Снять права" : "Дать права админа"}</button>
     <button class="icon-btn" data-act="member-remove" data-id="${m.tg_id}" title="Удалить из команды" aria-label="Удалить из команды: ${esc(m.name)}">${icon("trash")}</button>`;
+}
+
+/** Дни выхода проекта: у проектов из списка владельца закреплены (ADR 0028) — только показать; у новых — выбор. */
+function fixedDays(draft) {
+  const fixed = draft.id ? PUBLISH_DAYS[draft.id] : undefined;
+  if (fixed) {
+    const word = fixed === "even" ? "Чётные числа" : fixed === "odd" ? "Нечётные числа" : "Пауза — новые выпуски не выходят";
+    return `<label class="f"><span>Дни выхода</span><input class="inp" value="${word}" disabled></label>
+      <div class="muted small">Закреплено правилом владельца: выпуск на чужой день ставит только он, с подтверждением. Поменять список — правкой кода бота.</div>`;
+  }
+  return `<label class="f"><span>Дни выхода</span><select class="inp" data-pf="publish_days">${[["", "Любые — шаг «каждые N дней»"], ["even", "Чётные числа"], ["odd", "Нечётные числа"]].map(([v, n]) => `<option value="${v}" ${(draft.publish_days || "") === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>`;
 }
 
 export function view() {
@@ -105,7 +116,7 @@ function projectSheet(draft) {
       <label class="f grow"><span>Название</span><input class="inp" data-pf="name" value="${esc(draft.name)}" placeholder="Скрытая Физика"></label></div>
       <label class="f"><span>Цвет проекта — полоска на карточках и точки в календаре</span><div class="swatches">${PALETTE.map((c) => `<button class="swatch ${(draft.color || draft.autoColor) === c ? "on" : ""}" style="--pc:${c}" data-act="pick-color" data-c="${c}" aria-label="цвет ${c}"></button>`).join("")}</div></label>
       <label class="f"><span>Папка проекта на Google Диске (ссылка)</span><input class="inp" data-pf="drive_folder" value="${esc(draft.drive_folder)}" placeholder="https://drive.google.com/drive/folders/…"></label>
-      <label class="f"><span>Дни выхода</span><select class="inp" data-pf="publish_days">${[["", "Любые — шаг «каждые N дней»"], ["even", "Чётные числа"], ["odd", "Нечётные числа"]].map(([v, n]) => `<option value="${v}" ${(draft.publish_days || "") === v ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      ${fixedDays(draft)}
       <label class="f"><span>Выпуск каждые N дней (дата выхода нового выпуска; при чётных или нечётных числах не считается)</span><input class="inp" type="number" min="1" data-pf="cadence_days" value="${draft.cadence_days}"></label>
       <label class="f"><span>Озвучка: через сколько дней после сценария (0 — в тот же день; пусто — по дате выхода)</span><input class="inp" type="number" min="0" data-pf="voice_days" value="${draft.voice_days ?? ""}"></label>
       <span class="muted small">За сколько дней до выхода должен быть готов этап:</span>
